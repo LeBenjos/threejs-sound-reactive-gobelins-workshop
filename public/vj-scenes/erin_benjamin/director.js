@@ -37,9 +37,12 @@ export default class Director {
 
 		// Max shot length shrinks as the music intensifies.
 		const maxDur = p.maxShotCalm + (p.maxShotIntense - p.maxShotCalm) * features.energy
-		// Rising edge of the hard kick (it decays from 1 every frame).
-		const kickCut = p.cutOnKickHard && audio.kickHard > 0.9 && this.prevKickHard <= 0.9
+		// Rising edge of the hard kick (it decays from 1 every frame); only a
+		// fraction of them cut, so the montage stays musical without being
+		// mechanical- one cut per beat reads as too much.
+		const kickHit = audio.kickHard > 0.9 && this.prevKickHard <= 0.9
 		this.prevKickHard = audio.kickHard
+		const kickCut = p.cutOnKickHard && kickHit && Math.random() < p.kickCutChance
 
 		if ((kickCut && this.shotTime >= p.minShot) || this.shotTime >= maxDur) this.cut(features.energy)
 

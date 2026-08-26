@@ -130,7 +130,8 @@ export default class Gui {
 		director.addBinding(this.scene.director.state, 'shot', { readonly: true })
 		director.addBinding(params.director, 'enabled')
 		director.addBinding(params.director, 'cutOnKickHard')
-		director.addBinding(params.director, 'minShot', { min: 0.5, max: 6, step: 0.1 })
+		director.addBinding(params.director, 'kickCutChance', { min: 0, max: 1, step: 0.05 })
+		director.addBinding(params.director, 'minShot', { min: 0.5, max: 10, step: 0.1 })
 		director.addBinding(params.director, 'maxShotCalm', { min: 4, max: 30, step: 0.5 })
 		director.addBinding(params.director, 'maxShotIntense', { min: 1, max: 15, step: 0.5 })
 
