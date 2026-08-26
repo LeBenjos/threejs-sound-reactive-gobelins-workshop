@@ -39,7 +39,7 @@ export default class Gui {
 		// Live meters of the derived signals + their calibration. Watch `energy`
 		// while the track plays: it should hug 0 in quiet passages and ~1 on drops-
 		// adjust quiet/loud until it does.
-		const audioFolder = this.pane.addFolder({ title: 'Audio' })
+		const audioFolder = this.pane.addFolder({ title: 'Audio', expanded: false })
 		audioFolder.addBinding(features, 'energy', { readonly: true, view: 'graph', min: 0, max: 1 })
 		audioFolder.addBinding(features, 'bass', { readonly: true, view: 'graph', min: 0, max: 1 })
 		audioFolder.addBinding(features, 'mid', { readonly: true, view: 'graph', min: 0, max: 1 })
@@ -50,7 +50,7 @@ export default class Gui {
 		audioFolder.addBinding(params.audio, 'release', { min: 0.2, max: 6, step: 0.1 })
 		audioFolder.addBinding(params.audio, 'floor', { min: 0, max: 0.6, step: 0.01 })
 
-		const auto = this.pane.addFolder({ title: 'Autopilot' })
+		const auto = this.pane.addFolder({ title: 'Autopilot', expanded: false })
 		auto.addBinding(params.autopilot, 'enabled')
 		auto.addBinding(params.autopilot, 'speed', { min: 0, max: 3, step: 0.01 })
 		auto.addBinding(params.autopilot, 'colorCycle')
@@ -73,7 +73,7 @@ export default class Gui {
 		edit.addBinding(this.presetEditor, 'cloudsColor', { view: 'color' }).on('change', () => this.editPresetColor('cloudsColor'))
 		edit.addBinding(this.presetEditor, 'bodyRim', { view: 'color' }).on('change', () => this.editPresetColor('bodyRim'))
 
-		const bodyFolder = this.pane.addFolder({ title: 'Body' })
+		const bodyFolder = this.pane.addFolder({ title: 'Body', expanded: false })
 		bodyFolder.addBinding(params.body, 'bassScale', { min: 0, max: 2, step: 0.05 })
 		bodyFolder.addBinding(params.body, 'material', {
 			options: { rim: 'rim', normal: 'normal', basic: 'basic', wireframe: 'wireframe', depth: 'depth' },
@@ -127,7 +127,7 @@ export default class Gui {
 		}
 		this.refreshBodyMatBindings()
 
-		const director = this.pane.addFolder({ title: 'Director' })
+		const director = this.pane.addFolder({ title: 'Director', expanded: false })
 		director.addBinding(this.scene.director.state, 'shot', { readonly: true })
 		director.addBinding(params.director, 'enabled')
 		director.addBinding(params.director, 'accentChance', { min: 0, max: 1, step: 0.05 })
@@ -137,14 +137,14 @@ export default class Gui {
 		director.addBinding(params.director, 'minEnergy', { min: 0, max: 1, step: 0.05 })
 		director.addBinding(params.director, 'zoomDrift', { min: 0, max: 1, step: 0.05 })
 
-		const events = this.pane.addFolder({ title: 'Events' })
+		const events = this.pane.addFolder({ title: 'Events', expanded: false })
 		events.addBinding(this.scene.events.state, 'last', { readonly: true })
 		events.addBinding(params.events, 'enabled')
 		events.addBinding(params.events, 'chance', { min: 0, max: 1, step: 0.05 })
 		events.addBinding(params.events, 'cooldown', { min: 0, max: 60, step: 1 })
 		events.addBinding(params.events, 'minEnergy', { min: 0, max: 1, step: 0.05 })
 
-		const cam = this.pane.addFolder({ title: 'Camera' })
+		const cam = this.pane.addFolder({ title: 'Camera', expanded: false })
 		cam.addBinding(params.camera, 'baseSpeed', { min: 0, max: 2, step: 0.01 })
 		cam.addBinding(params.camera, 'kickMult', { min: 0, max: 20, step: 0.1 })
 		cam.addBinding(params.camera, 'verticalSpeed', { min: 0, max: 2, step: 0.01 })
@@ -153,7 +153,7 @@ export default class Gui {
 		cam.addBinding(cameraRig.orbit, 'radius', { min: 1, max: 10, step: 0.1 })
 		cam.addBinding(cameraRig.orbit, 'baseHeight', { min: -6, max: 8, step: 0.05 })
 
-		const skyFolder = this.pane.addFolder({ title: 'Sky' })
+		const skyFolder = this.pane.addFolder({ title: 'Sky', expanded: false })
 		skyFolder.addBinding(params.sky, 'enabled')
 		skyFolder.addBinding(params.sky, 'scrollSpeedBase', { min: 0, max: 0.5, step: 0.005 })
 		skyFolder.addBinding(params.sky, 'scrollEnergyMult', { min: 0, max: 1, step: 0.01 })
@@ -171,9 +171,9 @@ export default class Gui {
 			sky.uniforms.cloudColor.value.set(ev.value)
 		})
 
-		const cloudsFolder = this.pane.addFolder({ title: 'Clouds' })
+		const cloudsFolder = this.pane.addFolder({ title: 'Clouds', expanded: false })
 		cloudsFolder.addBinding(params.clouds, 'enabled')
-		cloudsFolder.addBinding(params.clouds, 'count', { min: 0, max: 200, step: 1 }).on('change', (ev) => {
+		cloudsFolder.addBinding(params.clouds, 'count', { min: 0, max: 400, step: 1 }).on('change', (ev) => {
 			if (ev.last) clouds.rebuild()   // rebuild only on release, not every tick
 		})
 		cloudsFolder.addBinding(params.clouds, 'riseSpeedBase', { min: 0, max: 6, step: 0.05 })
@@ -184,7 +184,7 @@ export default class Gui {
 			clouds.setColor(ev.value)
 		})
 
-		const bloom = this.pane.addFolder({ title: 'Bloom' })
+		const bloom = this.pane.addFolder({ title: 'Bloom', expanded: false })
 		bloom.addBinding(params.bloom, 'enabled')
 		bloom.addBinding(params.bloom, 'strengthBase', { min: 0, max: 3, step: 0.01 })
 		bloom.addBinding(params.bloom, 'energyMult', { min: 0, max: 3, step: 0.01 })
@@ -192,17 +192,17 @@ export default class Gui {
 		bloom.addBinding(params.bloom, 'radius', { min: 0, max: 2, step: 0.01 })
 		bloom.addBinding(params.bloom, 'threshold', { min: 0, max: 1, step: 0.01 })
 
-		const after = this.pane.addFolder({ title: 'Afterimage' })
+		const after = this.pane.addFolder({ title: 'Afterimage', expanded: false })
 		after.addBinding(params.afterimage, 'enabled')
 		after.addBinding(params.afterimage, 'dampBase', { min: 0, max: 0.99, step: 0.01 })
 		after.addBinding(params.afterimage, 'kickHardMult', { min: 0, max: 0.2, step: 0.005 })
 
-		const rgb = this.pane.addFolder({ title: 'RGB Shift' })
+		const rgb = this.pane.addFolder({ title: 'RGB Shift', expanded: false })
 		rgb.addBinding(params.rgbShift, 'enabled')
 		rgb.addBinding(params.rgbShift, 'highMult', { min: 0, max: 0.02, step: 0.0005 })
 		rgb.addBinding(params.rgbShift, 'angle', { min: 0, max: Math.PI * 2, step: 0.01 })
 
-		const fish = this.pane.addFolder({ title: 'Fisheye' })
+		const fish = this.pane.addFolder({ title: 'Fisheye', expanded: false })
 		fish.addBinding(params.fisheye, 'enabled')
 		fish.addBinding(params.fisheye, 'strengthBase', { min: -0.5, max: 2, step: 0.01 })
 		fish.addBinding(params.fisheye, 'energyMult', { min: 0, max: 1, step: 0.01 })

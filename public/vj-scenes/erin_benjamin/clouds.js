@@ -129,7 +129,11 @@ export default class Clouds {
 			// their band and dissolve before the recycle teleport at the top- no
 			// visible spawn/despawn pop whatever the camera angle. Respawn happens
 			// exactly at ±yRange, where this envelope is zero.
-			const edgeFade = 1 - THREE.MathUtils.smoothstep(Math.abs(cloud.position.y), layer.yRange * 0.85, layer.yRange)
+			// The fade distance follows the layer's CURRENT rise speed (at least
+			// half a second of travel inside the fade, capped at half the band):
+			// a fixed slice reads as a hard pop when kicks push the rise fast.
+			const fadeDist = Math.min(layer.yRange * 0.5, Math.max(layer.yRange * 0.15, baseRise * layer.speedMult * 0.5))
+			const edgeFade = 1 - THREE.MathUtils.smoothstep(Math.abs(cloud.position.y), layer.yRange - fadeDist, layer.yRange)
 			cloud.material.uniforms.opacity.value = spriteOpacity * edgeFade
 			cloud.material.uniforms.time.value = this.churn
 		}

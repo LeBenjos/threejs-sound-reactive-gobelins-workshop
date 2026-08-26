@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js'
 
 import { BLOOM_LAYER, COLOR_PRESETS, TARGET_HEIGHT } from './config.js'
 import RimShader from './shaders/RimShader.js'
@@ -66,9 +67,13 @@ export default class Body {
 			...names.map((n) => safeLoad(fbxLoader, CLIP_URLS[n])),
 		])
 		this.object = gltf?.scene ?? null
+		this.sourceRigs = {}   // the loaded FBX scenes- source skeletons for retargeting
 		names.forEach((n, i) => {
 			const clip = fbxes[i]?.animations?.[0] ?? null
-			if (clip) this.clips[n] = clip
+			if (clip) {
+				this.clips[n] = clip
+				this.sourceRigs[n] = fbxes[i]
+			}
 		})
 		// body.glb may embed a T-pose/idle clip- only used if falling.fbx failed.
 		if (!this.clips.falling && gltf?.animations?.[0]) this.clips.falling = gltf.animations[0]
@@ -104,9 +109,24 @@ export default class Body {
 		if (this.clips.falling) {
 			this.mixer = new THREE.AnimationMixer(this.object)
 			for (const [name, clip] of Object.entries(this.clips)) {
-				this.remapClipToBody(clip)
-				this.diagnoseRetarget(clip, name)
-				this.actions[name] = this.mixer.clipAction(clip)
+				// falling.fbx was authored for this rig- a simple track rename is
+				// enough. The Mixamo event clips animate a DIFFERENT skeleton (other
+				// bind orientations): they must be properly retargeted, or the raw
+				// rotations mangle the pose.
+				let finalClip = clip
+				if (name === 'falling') this.remapClipToBody(clip)
+				else {
+					finalClip = this.retargetForeignClip(clip, this.sourceRigs[name])
+					// A failed retarget must NOT become an action: fading to a clip
+					// that drives no bones collapses the body into a bind T-pose.
+					if (!finalClip) {
+						console.warn(`[erin_benjamin] "${name}" retarget failed- event disabled`)
+						continue
+					}
+				}
+				this.clips[name] = finalClip
+				this.diagnoseRetarget(finalClip, name)
+				this.actions[name] = this.mixer.clipAction(finalClip)
 			}
 			// backflip is a one-shot: clamp on the last frame while fading back
 			// (the 'finished' listener below triggers the return to falling).
@@ -188,44 +208,71 @@ export default class Body {
 	}
 
 	remapClipToBody(clip) {
-		// Two naming worlds meet here. Body bones: "MaleBaseMeshHips_01"
-		// (suffix _NN). Native clips (falling.fbx) track "MaleBaseMeshHips"-
-		// matched by the stripped map. Foreign Mixamo clips (Backflip/Flying)
-		// track "mixamorigHips"- matched by suffix after stripping the mixamorig
-		// prefix ("Hips" → the body bone whose stripped name ends with it).
-		const bones = []
-		const byStripped = new Map()
+		// Body bones may carry a numeric suffix (e.g. "MaleBaseMeshHips_01") absent
+		// from the clip's track names ("MaleBaseMeshHips"). Build a stripped-key map
+		// then rewrite each track name to the matching body bone.
+		const bodyByStrippedName = new Map()
 		this.object.traverse((o) => {
 			if (!o.isBone) return
 			const stripped = o.name.replace(/_\d+$/, '')
-			bones.push([stripped, o.name])
-			if (!byStripped.has(stripped)) byStripped.set(stripped, o.name)
+			if (!bodyByStrippedName.has(stripped)) bodyByStrippedName.set(stripped, o.name)
 		})
-		const resolve = (trackBone) => {
-			if (byStripped.has(trackBone)) return { name: byStripped.get(trackBone), foreign: false }
-			const core = trackBone.replace(/^mixamorig:?/i, '')
-			if (core !== trackBone) {
-				const hit = bones.find(([stripped]) => stripped.endsWith(core))
-				if (hit) return { name: hit[1], foreign: true }
-			}
-			return null
-		}
 		let remapped = 0
-		let dropped = 0
-		clip.tracks = clip.tracks.filter((track) => {
+		for (const track of clip.tracks) {
 			const lastDot = track.name.lastIndexOf('.')
-			if (lastDot < 0) return true
+			if (lastDot < 0) continue
 			const trackBone = track.name.slice(0, lastDot)
 			const prop = track.name.slice(lastDot)
-			const hit = resolve(trackBone)
-			if (!hit) return true
-			// Foreign rig: rotations only- position/scale amplitudes don't
-			// transfer between rigs, and root motion is meaningless in free fall.
-			if (hit.foreign && prop !== '.quaternion') { dropped++; return false }
-			if (hit.name !== trackBone) { track.name = hit.name + prop; remapped++ }
-			return true
+			const mapped = bodyByStrippedName.get(trackBone)
+			if (mapped && mapped !== trackBone) {
+				track.name = mapped + prop
+				remapped++
+			}
+		}
+		console.log(`[erin_benjamin] "${clip.name}": remapped ${remapped}/${clip.tracks.length} tracks to body bones`)
+	}
+
+	// Proper cross-rig retarget for the Mixamo event clips: their skeleton has
+	// different bind orientations, so raw rotation copies mangle the pose.
+	// SkeletonUtils.retargetClip replays the clip on the SOURCE skeleton and
+	// rebakes each bone's rotation into the target's frame. Rotations only-
+	// root motion is meaningless in free fall.
+	retargetForeignClip(clip, sourceRoot) {
+		if (!sourceRoot) return null
+		let targetSkin = null
+		this.object.traverse((o) => { if (!targetSkin && o.isSkinnedMesh) targetSkin = o })
+		let sourceSkin = null
+		const sourceBones = []
+		sourceRoot.traverse((o) => {
+			if (!sourceSkin && o.isSkinnedMesh) sourceSkin = o
+			if (o.isBone) sourceBones.push(o)
 		})
-		console.log(`[erin_benjamin] "${clip.name}": remapped ${remapped}, dropped ${dropped}, kept ${clip.tracks.length} tracks`)
+		if (!targetSkin || sourceBones.length === 0) return null
+
+		// names: target bone → source bone. "MaleBaseMeshHips_05" → core "Hips"
+		// → "mixamorig:Hips" (this rig is Mixamo-derived, so cores line up).
+		const names = {}
+		let mapped = 0
+		for (const bone of targetSkin.skeleton.bones) {
+			const core = bone.name.replace(/_\d+$/, '').replace(/^MaleBaseMesh/i, '')
+			const hit = sourceBones.find((sb) => sb.name.replace(/^mixamorig:?/i, '') === core)
+			if (hit) { names[bone.name] = hit.name; mapped++ }
+		}
+		if (mapped === 0) {
+			console.warn(`[erin_benjamin] "${clip.name}": no bones mapped for retarget`)
+			return null
+		}
+
+		const source = sourceSkin ?? new THREE.Skeleton(sourceBones)
+		const result = SkeletonUtils.retargetClip(targetSkin, source, clip, {
+			names,
+			hip: '__none__',   // no source bone matches → no position track baked
+		})
+		result.tracks = result.tracks.filter((t) => t.name.endsWith('.quaternion'))
+		result.name = clip.name
+		targetSkin.skeleton.pose()   // the bake left the skeleton in the last frame- reset to bind
+		console.log(`[erin_benjamin] "${clip.name}": retargeted via ${mapped} mapped bones, ${result.tracks.length} rotation tracks`)
+		return result
 	}
 
 	diagnoseRetarget(clip, label) {
