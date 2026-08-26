@@ -21,6 +21,7 @@ export default class AudioFeatures {
 		this.pace = 0.5   // bpm normalized between bpmSlow..bpmFast, eased
 		this.rate = 1     // global world-speed multiplier derived from pace
 		this.peaks = { bass: 0.05, mid: 0.05, high: 0.05, energy: 0.05 }
+		this.floorLevel = 0.05   // slow-rising minimum tracker- see update()
 		this.time = 0
 		this.prevKick = 0
 		this.lastKickAt = null
@@ -43,11 +44,18 @@ export default class AudioFeatures {
 		this.mid = follow(this.mid, this.normalized('mid', mean(f, 8, 60), dt), dt, 0.04, 0.3)
 		this.high = follow(this.high, this.normalized('high', mean(f, 60, 200), dt), dt, 0.04, 0.3)
 
-		// Intensity: spectrum mean relative to the track's recent peak, shaped
-		// between quiet/loud (fractions of that peak- smoothstep expands the
-		// useful range), then eased asymmetrically: a drop ramps the scene up in
-		// ~attack seconds, a breakdown lets it settle over ~release seconds.
-		const rel = this.normalized('energy', mean(f, 1, 120), dt)
+		// Intensity: where the spectrum sits inside the track's ACTUAL dynamic
+		// range- (raw - floor) / (peak - floor). Peak-only normalization pinned
+		// compressed music (which lives in a narrow band near its peak) at ~1
+		// permanently; tracking the floor too (rises slowly toward raw over
+		// ~25s, snaps down instantly) re-spreads that band over 0..1. Then
+		// shaped between quiet/loud and eased asymmetrically: a drop ramps the
+		// scene up in ~attack seconds, a breakdown settles over ~release.
+		const raw = mean(f, 1, 120)
+		const peaks = this.peaks
+		peaks.energy = Math.max(0.05, raw, peaks.energy * Math.pow(0.99985, dt * 60))
+		this.floorLevel = Math.min(raw, this.floorLevel + (raw - this.floorLevel) * (1 - Math.exp(-dt / 25)))
+		const rel = (raw - this.floorLevel) / Math.max(0.02, peaks.energy - this.floorLevel)
 		const t = Math.min(1, Math.max(0, (rel - p.quiet) / Math.max(0.01, p.loud - p.quiet)))
 		this.energy = follow(this.energy, t * t * (3 - 2 * t), dt, p.attack, p.release)
 

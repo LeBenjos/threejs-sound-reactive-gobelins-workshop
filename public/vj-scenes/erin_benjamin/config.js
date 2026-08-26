@@ -65,7 +65,7 @@ export function createDefaultParams() {
 		// floor is the share of base background speed kept when the music is silent.
 		// bpmSlow/bpmFast bracket the tempo estimate into `pace`; rateMin/rateMax
 		// is the resulting world-speed multiplier applied scene-wide.
-		audio: { quiet: 0.25, loud: 0.75, attack: 0.4, release: 2.0, floor: 0.15, bpmSlow: 80, bpmFast: 150, rateMin: 0.75, rateMax: 1.4 },
+		audio: { quiet: 0.25, loud: 0.75, attack: 0.4, release: 2.0, floor: 0.15, bpmSlow: 90, bpmFast: 165, rateMin: 0.7, rateMax: 1.3 },
 		autopilot: { enabled: true, speed: 0.5, colorCycle: true, preset: 0, switchInterval: PRESET_HOLD_SECONDS },
 		// Director (base flow + hard-kick accents): a hard kick punches to an
 		// accent shot when energy >= minEnergy, the cooldown has elapsed and the
