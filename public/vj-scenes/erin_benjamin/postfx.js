@@ -51,17 +51,12 @@ export default class PostFX {
 		}), 'baseTexture')
 		this.rgbShiftPass = new ShaderPass(RGBShiftShader)
 		this.rgbShiftPass.uniforms.amount.value = 0
-		// Dreamy veil: a SECOND, gentle bloom over the whole frame (the selective
-		// one only halos the body)- lights bleed softly, the image turns milky.
-		// Half resolution: it's a blur, the cost doesn't need to be full-res.
-		this.veilPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.08, 1.0, 0.85)
 		this.fisheyePass = new ShaderPass(FisheyeShader)   // last lens before output
 		const outputPass = new OutputPass()   // tone mapping + sRGB- required after bloom
 
 		this.composer.addPass(renderPass)
 		this.composer.addPass(this.afterimagePass)
 		this.composer.addPass(this.bloomMergePass)
-		this.composer.addPass(this.veilPass)
 		this.composer.addPass(this.rgbShiftPass)
 		this.composer.addPass(this.fisheyePass)
 		this.composer.addPass(outputPass)
@@ -83,9 +78,6 @@ export default class PostFX {
 		this.bloomPass.radius = p.bloom.radius
 		this.bloomPass.threshold = p.bloom.threshold
 		this.bloomMergePass.enabled = p.bloom.enabled
-		this.veilPass.enabled = p.bloom.veilStrength > 0.005
-		this.veilPass.strength = p.bloom.veilStrength
-		this.veilPass.threshold = p.bloom.veilThreshold
 		this.afterimagePass.enabled = p.afterimage.enabled
 		// Capped at 0.92 (was 0.96): above that the trails stop reading as speed
 		// and smear the whole frame into radial mush during intense passages.

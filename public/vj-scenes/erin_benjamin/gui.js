@@ -198,8 +198,6 @@ export default class Gui {
 			if (ev.last) this.scene.rays.rebuild()
 		})
 		dreamy.addBinding(params.rays, 'opacity', { min: 0, max: 0.3, step: 0.005 })
-		dreamy.addBinding(params.bloom, 'veilStrength', { min: 0, max: 0.8, step: 0.01, label: 'voile bloom' })
-		dreamy.addBinding(params.bloom, 'veilThreshold', { min: 0, max: 1, step: 0.01, label: 'seuil voile' })
 
 		const skyFolder = this.pane.addFolder({ title: 'Sky', expanded: false })
 		skyFolder.addBinding(params.sky, 'enabled')
