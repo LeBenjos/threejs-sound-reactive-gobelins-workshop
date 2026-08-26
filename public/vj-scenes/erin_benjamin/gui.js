@@ -36,6 +36,11 @@ export default class Gui {
 		const { params, features, body, cameraRig, sky, clouds, autopilot } = this.scene
 		this.pane = new Pane({ title: 'Postprocessing' })
 
+		// Always-visible monitors (the folders below are collapsed): the shot the
+		// director is holding right now, and the last animation event fired.
+		this.pane.addBinding(this.scene.director.state, 'shot', { readonly: true, label: 'shot en cours' })
+		this.pane.addBinding(this.scene.events.state, 'last', { readonly: true, label: 'dernier event' })
+
 		// Live meters of the derived signals + their calibration. Watch `energy`
 		// while the track plays: it should hug 0 in quiet passages and ~1 on drops-
 		// adjust quiet/loud until it does.
