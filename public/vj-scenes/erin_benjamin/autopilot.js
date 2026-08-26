@@ -21,13 +21,12 @@ export default class Autopilot {
 		this.presetTimer = 0
 	}
 
-	// Hard palette switch on a musical drop: jump straight to the next preset
-	// (the per-frame color mix follows immediately) and restart the dwell.
+	// Palette surge on a musical drop: no hard jump- the running transition
+	// races at 12x from exactly where it is (smooth, ~1.5-2s instead of the
+	// dwell interval), lands on the next preset, then the cycle resumes at
+	// normal speed.
 	skipToNext() {
-		const p = this.params.autopilot
-		p.preset = (p.preset + 1) % COLOR_PRESETS.length
-		this.presetTimer = 0
-		this.onPresetAdvanced?.(p.preset)
+		this.surge = 12
 	}
 
 	update(dt) {
@@ -66,9 +65,10 @@ export default class Autopilot {
 		// so the user always sees which preset is active. Manual dropdown picks reset
 		// the timer (resetPresetTimer) so the lerp starts fresh from the chosen one.
 		const interval = Math.max(0.5, p.autopilot.switchInterval)
-		this.presetTimer += dt * p.autopilot.speed
+		this.presetTimer += dt * p.autopilot.speed * (this.surge ?? 1)
 		if (this.presetTimer >= interval) {
 			this.presetTimer -= interval
+			this.surge = 1   // the drop surge ends where the transition lands
 			p.autopilot.preset = (p.autopilot.preset + 1) % COLOR_PRESETS.length
 			this.onPresetAdvanced?.(p.autopilot.preset)
 		}
