@@ -21,12 +21,19 @@ export default class Autopilot {
 		this.presetTimer = 0
 	}
 
-	// Palette surge on a musical drop: no hard jump- the running transition
-	// races at 12x from exactly where it is (smooth, ~1.5-2s instead of the
-	// dwell interval), lands on the next preset, then the cycle resumes at
-	// normal speed.
+	// Palette change on a musical drop, two flavors behind params.autopilot.dropSnap:
+	// - surge (default): the running transition races at 12x from exactly where
+	//   it is- smooth, ~1.5-2s- lands on the next preset, cycle resumes.
+	// - snap: hard cut to the next preset, a deliberate color slam.
 	skipToNext() {
-		this.surge = 12
+		if (!this.params.autopilot.dropSnap) {
+			this.surge = 12
+			return
+		}
+		const p = this.params.autopilot
+		p.preset = (p.preset + 1) % COLOR_PRESETS.length
+		this.presetTimer = 0
+		this.onPresetAdvanced?.(p.preset)
 	}
 
 	update(dt) {

@@ -72,6 +72,7 @@ export default class Gui {
 		auto.addBinding(params.autopilot, 'speed', { min: 0, max: 3, step: 0.01 })
 		auto.addBinding(params.autopilot, 'colorCycle')
 		auto.addBinding(params.autopilot, 'switchInterval', { min: 2, max: 60, step: 0.5 })
+		auto.addBinding(params.autopilot, 'dropSnap', { label: 'drop = coupure sèche' })
 		// Manual preset selector- overridden live when colorCycle is on (the cycle
 		// keeps writing into the uniforms each frame).
 		const presetOptions = Object.fromEntries(COLOR_PRESETS.map((pst, i) => [pst.name, i]))
