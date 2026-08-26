@@ -9,6 +9,8 @@ const SHOTS = [
 	// speedMult/bobMult scale the rig's orbit speed and vertical bob.
 	// calm/intense: selection weights blended by energy.
 	{ name: 'wide', radius: [4.5, 6.5], height: [0.6, 1.4], lookY: 0, speedMult: 1.0, bobMult: 1.0, calm: 3, intense: 1 },
+	// far: the body becomes a small figure lost in the sky.
+	{ name: 'far', radius: [9, 15], height: [1.0, 3.5], lookY: 0, speedMult: 0.7, bobMult: 1.6, calm: 3, intense: 2 },
 	{ name: 'closeup', radius: [1.7, 2.4], height: [0.2, 0.7], lookY: 0.35, speedMult: 0.6, bobMult: 0.25, calm: 1, intense: 3 },
 	{ name: 'lowAngle', radius: [2.5, 3.5], height: [-2.2, -1.2], lookY: 0.2, speedMult: 0.8, bobMult: 0.4, calm: 1, intense: 2 },
 	{ name: 'topDown', radius: [1.2, 2.0], height: [2.6, 3.4], lookY: -0.3, speedMult: 0.9, bobMult: 0.3, calm: 1, intense: 2 },
@@ -16,13 +18,10 @@ const SHOTS = [
 	{ name: 'dolly', radius: [6.5, 2.5], height: [0.4, 0.9], lookY: 0.1, speedMult: 0.35, bobMult: 0.5, dolly: true, calm: 3, intense: 1 },
 	// Bone-tracked shots (kind handled by the CameraRig):
 	// face- in front of the head, looking at it. below- under the falling
-	// body, silhouette against the sky. hand- close on a hand, the body
-	// behind. pov- through their eyes, WIDE fov + gaze tilted toward the body
-	// so the flailing arms cross the frame edges and sell the first person.
+	// body, silhouette against the sky. hand- close on a hand, the body behind.
 	{ name: 'face', track: 'face', dist: [0.9, 1.4], calm: 1, intense: 2 },
-	{ name: 'below', track: 'below', dist: [2.2, 3.2], fov: 62, calm: 2, intense: 2 },
+	{ name: 'below', track: 'below', dist: [2.2, 3.2], calm: 2, intense: 2 },
 	{ name: 'hand', track: 'hand', dist: [0.5, 0.9], calm: 2, intense: 1 },
-	{ name: 'pov', track: 'pov', dist: [0.12, 0.2], fov: 92, calm: 1, intense: 2 },
 ]
 
 const rand = (min, max) => min + Math.random() * (max - min)
@@ -79,7 +78,6 @@ export default class Director {
 		this.shot = next
 		this.state.shot = next.name
 		this.shotTime = 0
-		this.rig.setFov(next.fov ?? 50)   // per-shot lens- wide for pov/below
 
 		// Bone-tracked shot: the rig ignores the orbit while trackShot is set.
 		// side/side2 give the 'below' shot a random lateral offset per cut.
