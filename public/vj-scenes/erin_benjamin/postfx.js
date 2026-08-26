@@ -54,7 +54,7 @@ export default class PostFX {
 		// Dreamy veil: a SECOND, gentle bloom over the whole frame (the selective
 		// one only halos the body)- lights bleed softly, the image turns milky.
 		// Half resolution: it's a blur, the cost doesn't need to be full-res.
-		this.veilPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.22, 1.0, 0.5)
+		this.veilPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.08, 1.0, 0.85)
 		this.fisheyePass = new ShaderPass(FisheyeShader)   // last lens before output
 		const outputPass = new OutputPass()   // tone mapping + sRGB- required after bloom
 

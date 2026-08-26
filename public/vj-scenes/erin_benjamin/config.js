@@ -138,7 +138,7 @@ export function createDefaultParams() {
 		// #d5d5dd base): only the rim-boosted edges cross it, so the bloom halos
 		// the contour instead of flaring the whole body.
 		// veilStrength/veilThreshold: the dreamy full-frame bloom veil (0 = off).
-		bloom: { enabled: true, strengthBase: 0.15, energyMult: 0.35, kickHardMult: 2.2, radius: 1.50, threshold: 0.85, veilStrength: 0.22, veilThreshold: 0.5 },
+		bloom: { enabled: true, strengthBase: 0.15, energyMult: 0.35, kickHardMult: 2.2, radius: 1.50, threshold: 0.85, veilStrength: 0.08, veilThreshold: 0.85 },
 		afterimage: { enabled: true, dampBase: 0.85, kickHardMult: 0.2 },
 		rgbShift: { enabled: true, highMult: 0.006, angle: 1.98 },
 		fisheye: { enabled: true, strengthBase: 1.0, energyMult: 0.45, kickHardMult: 1.3 },
