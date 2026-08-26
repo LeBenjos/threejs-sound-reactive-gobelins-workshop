@@ -16,6 +16,7 @@ export default class AudioFeatures {
 		this.mid = 0      // ~0.7-5 kHz     (unused yet- exposed for future effects)
 		this.high = 0     // ~5-17 kHz      hats/cymbals → RGB shift
 		this.energy = 0   // passage intensity → global reactivity gate
+		this.flow = 0     // smoothed kick- a bell-shaped swell per beat, for VELOCITIES
 		this.peaks = { bass: 0.05, mid: 0.05, high: 0.05, energy: 0.05 }
 	}
 
@@ -42,6 +43,11 @@ export default class AudioFeatures {
 		const rel = this.normalized('energy', mean(f, 1, 120), dt)
 		const t = Math.min(1, Math.max(0, (rel - p.quiet) / Math.max(0.01, p.loud - p.quiet)))
 		this.energy = follow(this.energy, t * t * (3 - 2 * t), dt, p.attack, p.release)
+
+		// Smoothed kick for anything driving a VELOCITY (camera orbit, sky scroll,
+		// cloud rise): the raw kick is a step- stepping a velocity reads as a
+		// stutter- while this swells and settles. Raw kick stays for flashes.
+		this.flow = follow(this.flow, audio.kick, dt, 0.09, 0.35)
 	}
 
 }

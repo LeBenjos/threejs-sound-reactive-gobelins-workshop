@@ -40,7 +40,7 @@ export default class Sky {
 		// BASE speed itself sinks toward `floor` when the music goes silent.
 		const floor = this.params.audio.floor
 		const base = p.scrollSpeedBase * (floor + (1 - floor) * features.energy)
-		this.time += dt * (base + features.energy * p.scrollEnergyMult + audio.kick * p.scrollKickMult * features.energy)
+		this.time += dt * (base + features.energy * p.scrollEnergyMult + features.flow * p.scrollKickMult * features.energy)
 		const u = this.uniforms
 		u.time.value = this.time
 		u.cloudScale.value = p.cloudScale

@@ -83,7 +83,7 @@ export default class Clouds {
 		// the BASE speed itself sinks toward `floor` when the music goes silent.
 		const floor = this.params.audio.floor
 		const base = p.riseSpeedBase * (floor + (1 - floor) * features.energy)
-		const baseRise = base + features.energy * p.riseEnergyMult + audio.kick * p.riseKickMult * features.energy
+		const baseRise = base + features.energy * p.riseEnergyMult + features.flow * p.riseKickMult * features.energy
 		const baseDy = dt * baseRise
 		for (const cloud of this.group.children) {
 			const layer = CLOUD_LAYERS[cloud.userData.layerIndex]
