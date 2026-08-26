@@ -14,6 +14,8 @@ const SHOTS = [
 	{ name: 'topDown', radius: [1.2, 2.0], height: [2.6, 3.4], lookY: -0.3, speedMult: 0.9, bobMult: 0.3, calm: 1, intense: 2 },
 	// dolly: radius glides from radius[0] toward radius[1] over the shot.
 	{ name: 'dolly', radius: [6.5, 2.5], height: [0.4, 0.9], lookY: 0.1, speedMult: 0.35, bobMult: 0.5, dolly: true, calm: 3, intense: 1 },
+	// face: head-tracked- anchored in front of the head bone, follows the fall.
+	{ name: 'face', track: true, dist: [0.9, 1.4], calm: 1, intense: 2 },
 ]
 
 const rand = (min, max) => min + Math.random() * (max - min)
@@ -70,6 +72,13 @@ export default class Director {
 		this.shot = next
 		this.state.shot = next.name
 		this.shotTime = 0
+
+		// Head-tracked shot: the rig ignores the orbit while trackShot is set.
+		if (next.track) {
+			this.rig.trackShot = { dist: rand(next.dist[0], next.dist[1]), fresh: true }
+			return
+		}
+		this.rig.trackShot = null
 
 		// Hard cut: reframe instantly + jump to a fresh viewpoint, and re-roll
 		// the orbit direction so the camera doesn't always circle the same way.

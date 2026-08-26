@@ -51,6 +51,7 @@ export default class ErinBenjaminScene {
 		this.pivot = new THREE.Group()
 		this.scene.add(this.pivot)
 		this.body.init(this.pivot)
+		this.cameraRig.body = this.body   // head anchor for the director's face shot
 
 		this.postfx = new PostFX(this.renderer, this.scene, this.cameraRig.camera, this.params)
 		this.director = new Director(this.params, this.cameraRig)

@@ -22,6 +22,19 @@ export default class Body {
 		// right and front); rotated into view space each frame in update().
 		this.lightDirWorld = new THREE.Vector3(0.5, 0.8, 0.3).normalize()
 		this.lightScratch = new THREE.Vector3()
+		this.headBone = null   // found in init()- anchor for the 'face' camera shot
+	}
+
+	// Head world position/orientation for the face shot (fallback: rough head
+	// height at the pivot). Called after the mixer update, so poses are current.
+	getHeadPosition(target) {
+		if (this.headBone) return this.headBone.getWorldPosition(target)
+		return target.set(0, 0.8, 0)
+	}
+
+	getHeadQuaternion(target) {
+		if (this.headBone) return this.headBone.getWorldQuaternion(target)
+		return target.identity()
 	}
 
 	async load() {
@@ -58,6 +71,10 @@ export default class Body {
 				meshCount++
 			}
 		})
+		this.object.traverse((o) => {
+			if (!this.headBone && o.isBone && /head/i.test(o.name)) this.headBone = o
+		})
+		console.log(`[erin_benjamin] head bone: ${this.headBone?.name ?? 'not found (face shot falls back to fixed height)'}`)
 		this.setMaterial(this.params.body.material)
 		console.log(`[erin_benjamin] body: ${meshCount} mesh(es)`)
 		if (meshCount === 0) console.warn('[erin_benjamin] body has no renderable meshes (skeleton only?)')

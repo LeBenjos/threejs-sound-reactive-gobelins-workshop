@@ -12,6 +12,15 @@ export default class CameraRig {
 		this.shotSpeedMult = 1
 		this.shotBobMult = 1
 		this.orbitDir = 1   // +1 / -1, re-rolled by the Director on each cut
+		// Head-tracked "face" shot: set by the Director ({dist, fresh}), null = orbit.
+		// this.body is wired by the scene after construction.
+		this.body = null
+		this.trackShot = null
+		this.faceAxis = new THREE.Vector3(0, -1, 0)   // head-bone local axis pointing out of the face (verified visually on this rig)
+		this.headPos = new THREE.Vector3()
+		this.headQuat = new THREE.Quaternion()
+		this.faceDir = new THREE.Vector3()
+		this.desiredPos = new THREE.Vector3()
 		this.camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 1000)
 		// Initial pose- update() recomputes from orbit each frame
 		const { angle, radius, baseHeight } = this.orbit
@@ -21,6 +30,18 @@ export default class CameraRig {
 
 	update(dt, audio, features) {
 		const p = this.params.camera
+		// Face shot: anchor in front of the head bone, follow it with a slight
+		// lag (handheld feel- snap on the cut itself), look straight at it.
+		if (this.trackShot && this.body) {
+			this.body.getHeadPosition(this.headPos)
+			this.body.getHeadQuaternion(this.headQuat)
+			this.faceDir.copy(this.faceAxis).applyQuaternion(this.headQuat).normalize()
+			this.desiredPos.copy(this.headPos).addScaledVector(this.faceDir, this.trackShot.dist)
+			if (this.trackShot.fresh) { this.camera.position.copy(this.desiredPos); this.trackShot.fresh = false }
+			else this.camera.position.lerp(this.desiredPos, 1 - Math.exp(-dt / 0.15))
+			this.camera.lookAt(this.headPos)
+			return
+		}
 		// Integrating into angular *velocity* (not angle directly) keeps motion
 		// smooth, and the beat impulse comes from features.flow (the smoothed
 		// kick)- the raw kick is a velocity STEP, which reads as a stutter.
