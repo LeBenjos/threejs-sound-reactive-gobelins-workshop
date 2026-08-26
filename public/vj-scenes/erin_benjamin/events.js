@@ -4,10 +4,13 @@
 // keeps them precious. When one fires, the director punches to an accent
 // shot at the same moment (if it was idling in base) so the move is staged.
 const EVENTS = [
-	// calm/intense: selection weights blended by energy.
+	// calm/intense: selection weights blended by energy. Events mostly fire at
+	// high energy (hard kicks live there), so flying keeps real weight in
+	// intense too- otherwise backflip wins nearly every roll.
 	{ name: 'backflip', hold: 0, calm: 0.5, intense: 3 },      // one-shot- returns by itself
-	{ name: 'flying', hold: [4, 7], calm: 3, intense: 1 },     // soaring- held then released
+	{ name: 'flying', hold: [4, 7], calm: 3, intense: 2.5 },   // soaring- held then released
 ]
+const REPEAT_PENALTY = 0.35   // last-played event's weight multiplier- variety without strict alternation
 
 const rand = (min, max) => min + Math.random() * (max - min)
 
@@ -33,10 +36,11 @@ export default class MusicEvents {
 		if (!kickHit || this.cooldown > 0 || features.energy < p.minEnergy) return
 		if (Math.random() >= p.chance) return
 
-		// Energy-blended weighted pick.
+		// Energy-blended weighted pick, repeat-penalized.
 		let total = 0
 		const weights = EVENTS.map((ev) => {
-			const w = ev.calm + (ev.intense - ev.calm) * features.energy
+			let w = ev.calm + (ev.intense - ev.calm) * features.energy
+			if (ev.name === this.state.last) w *= REPEAT_PENALTY
 			total += w
 			return w
 		})
