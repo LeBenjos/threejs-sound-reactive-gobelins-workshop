@@ -15,7 +15,12 @@ const FADE = 0.35   // crossfade duration between animations (seconds)
 // limbMix blends the falling clip's LIMB tracks over the flip (weight ratio
 // limbMix/(1+limbMix)): the body still fully rotates, but arms and legs keep
 // flailing- an involuntary tumble instead of a deliberate gymnast tuck.
-const EVENT_TUNING = { backflip: { fade: 0.6, startAt: 0.15, timeScale: 0.7, limbMix: 1.2 } }
+const EVENT_TUNING = {
+	backflip: { fade: 0.6, startAt: 0.15, timeScale: 0.7, limbMix: 1.2 },
+	// Same treatment for the soar: slow blend + some flail bleeding through
+	// (lighter mix- the glide pose must stay readable).
+	flying: { fade: 0.6, limbMix: 0.8 },
+}
 const LIMB_RE = /Arm|Hand|Shoulder|Leg|Foot|Toe/i   // everything but Hips/Spine/Neck/Head
 
 // The falling character. `falling` loops as the base state; playEvent()
@@ -145,6 +150,7 @@ export default class Body {
 		this.startAux(this.actions.fallingHips, 1, fade, fallingTime)
 		if (tuning?.limbMix) this.startAux(this.actions.fallingLimbs, tuning.limbMix, fade, fallingTime)
 		this.eventTimer = hold
+		this.eventFade = fade   // the timer-based return (flying) mirrors the entry fade
 		return true
 	}
 
@@ -175,7 +181,7 @@ export default class Body {
 		// Held event (flying) running out → glide back to the base fall.
 		if (this.eventTimer > 0) {
 			this.eventTimer -= dt
-			if (this.eventTimer <= 0) this.endEvent()
+			if (this.eventTimer <= 0) this.endEvent(this.eventFade)
 		}
 		// Rim material: the contour glow pulses on the strong beats (energy-gated,
 		// like the other flash effects), and the fixed world light is rotated into
