@@ -20,6 +20,9 @@ const EVENT_TUNING = {
 	// Same treatment for the soar: slow blend + some flail bleeding through
 	// (lighter mix- the glide pose must stay readable).
 	flying: { fade: 0.6, limbMix: 1.4 },
+	// Back-first fall: already a falling clip, so no limb mix needed- just a
+	// slow roll-over blend.
+	backfalling: { fade: 0.9 },
 }
 const LIMB_RE = /Arm|Hand|Shoulder|Leg|Foot|Toe/i   // everything but Hips/Spine/Neck/Head
 

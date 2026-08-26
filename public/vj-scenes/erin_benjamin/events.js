@@ -7,8 +7,9 @@ const EVENTS = [
 	// calm/intense: selection weights blended by energy. Events mostly fire at
 	// high energy (hard kicks live there), so flying keeps real weight in
 	// intense too- otherwise backflip wins nearly every roll.
-	{ name: 'backflip', hold: 0, calm: 0.5, intense: 3 },      // one-shot- returns by itself
-	{ name: 'flying', hold: [4, 7], calm: 3, intense: 2.5 },   // soaring- held then released
+	{ name: 'backflip', hold: 0, calm: 0.5, intense: 3 },        // one-shot- returns by itself
+	{ name: 'flying', hold: [4, 7], calm: 3, intense: 2.5 },     // soaring- held then released
+	{ name: 'backfalling', hold: [5, 9], calm: 2.5, intense: 2 }, // rolls onto his back- held then released
 ]
 const REPEAT_PENALTY = 0.35   // last-played event's weight multiplier- variety without strict alternation
 
