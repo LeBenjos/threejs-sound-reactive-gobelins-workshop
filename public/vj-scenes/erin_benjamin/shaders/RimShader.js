@@ -14,6 +14,8 @@ export default {
 		rimColor: { value: new THREE.Color(0xff6a00) },
 		rimPower: { value: 2.5 },
 		rimStrength: { value: 1.2 },
+		lightDir: { value: new THREE.Vector3(0.5, 0.8, 0.3).normalize() },   // VIEW space- set per frame
+		shading: { value: 0.45 },   // 0 = flat, →1 = high-contrast modeling
 	},
 	vertexShader: /* glsl */`
 		#include <common>
@@ -37,13 +39,22 @@ export default {
 		uniform vec3 rimColor;
 		uniform float rimPower;
 		uniform float rimStrength;
+		uniform vec3 lightDir;
+		uniform float shading;
 		varying vec3 vNormal;
 		varying vec3 vViewDir;
 		void main() {
-			float facing = max( dot( normalize( vNormal ), normalize( vViewDir ) ), 0.0 );
+			vec3 n = normalize( vNormal );
+			float facing = max( dot( n, normalize( vViewDir ) ), 0.0 );
 			float fresnel = pow( 1.0 - facing, rimPower );
-			// Soft facing shading gives the white some volume; the colored rim adds on top.
-			vec3 col = baseColor * ( 0.72 + 0.28 * facing ) + rimColor * fresnel * rimStrength;
+			// Half-Lambert modeling from a fixed world light (rotated to view space
+			// on the CPU): the lit side stays at full baseColor- luminance never
+			// exceeds it, so the bloom threshold contract still holds- while the
+			// far side falls off softly. As the camera orbits, the modeling sweeps
+			// across the body.
+			float ndl = dot( n, normalize( lightDir ) ) * 0.5 + 0.5;
+			float shade = mix( 1.0 - shading, 1.0, ndl );
+			vec3 col = baseColor * shade + rimColor * fresnel * rimStrength;
 			gl_FragColor = vec4( col, 1.0 );
 		}
 	`,

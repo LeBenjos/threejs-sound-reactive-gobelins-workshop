@@ -18,6 +18,10 @@ export default class Body {
 		this.fallingClip = null
 		this.mixer = null
 		this.mat = null
+		// Fixed world-space light for the rim material's modeling (above, slightly
+		// right and front); rotated into view space each frame in update().
+		this.lightDirWorld = new THREE.Vector3(0.5, 0.8, 0.3).normalize()
+		this.lightScratch = new THREE.Vector3()
 	}
 
 	async load() {
@@ -68,15 +72,18 @@ export default class Body {
 		}
 	}
 
-	update(dt, audio, features) {
+	update(dt, audio, features, camera) {
 		if (this.mixer) this.mixer.update(dt)
 		// Rim material: the contour glow pulses on the strong beats (energy-gated,
-		// like the other flash effects).
+		// like the other flash effects), and the fixed world light is rotated into
+		// view space so the modeling sweeps across the body as the camera orbits.
 		const u = this.mat?.uniforms
 		if (u?.rimStrength) {
 			const r = this.params.body.rim
 			u.rimStrength.value = r.strength + audio.kickHard * r.kickHardMult * features.energy
 			u.rimPower.value = r.power
+			u.shading.value = r.shading
+			u.lightDir.value.copy(this.lightScratch.copy(this.lightDirWorld).transformDirection(camera.matrixWorldInverse))
 		}
 	}
 

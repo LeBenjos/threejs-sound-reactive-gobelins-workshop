@@ -65,7 +65,7 @@ export function createDefaultParams() {
 		body: {
 			material: 'rim',
 			bassScale: 0.55,
-			rim: { baseColor: '#d5d5dd', power: 3.0, strength: 1.4, kickHardMult: 1.5 },
+			rim: { baseColor: '#d5d5dd', power: 3.0, strength: 1.4, kickHardMult: 1.5, shading: 0.45 },
 			normal: { wireframe: false, flatShading: false },
 			basic: { color: '#ffffff', wireframe: false },
 			wireframe: { color: '#ffffff' },

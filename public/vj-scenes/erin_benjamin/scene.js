@@ -78,7 +78,7 @@ export default class ErinBenjaminScene {
 
 		// Derived signals first- everything below reads them.
 		this.features.update(dt, a)
-		this.body.update(dt, a, this.features)
+		this.body.update(dt, a, this.features, this.cameraRig.camera)
 
 		// Autopilot next- mutates params so the audio-reactive logic below adds on top.
 		if (this.params.autopilot.enabled) this.autopilot.update(dt)
