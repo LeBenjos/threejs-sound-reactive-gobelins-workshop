@@ -30,28 +30,39 @@ export const CLOUD_LAYERS = [
 // that preset's sky so the silhouette always separates from the background.
 export const COLOR_PRESETS = [
 	{
+		// Deeper zenith than before- the gradient actually reads on wide shots.
 		name: 'Daylight',
-		skyTop: new THREE.Color(0x6fb4ff), skyBottom: new THREE.Color(0xbfe1ff),
+		skyTop: new THREE.Color(0x4f9fff), skyBottom: new THREE.Color(0xc4e3ff),
 		skyCloudColor: new THREE.Color(0xffffff), cloudsColor: new THREE.Color(0xffffff),
 		bodyRim: new THREE.Color(0xff6a00),
 	},
 	{
+		// Gradient un-inverted: dusky mauve zenith over a glowing orange horizon
+		// (the old version put the orange on top). Peach clouds catch the low sun.
 		name: 'Sunset',
-		skyTop: new THREE.Color(0xeca36a), skyBottom: new THREE.Color(0xd895c6),
-		skyCloudColor: new THREE.Color(0xf4aea6), cloudsColor: new THREE.Color(0xeba599),
-		bodyRim: new THREE.Color(0x00e5ff),
+		skyTop: new THREE.Color(0x8f4f86), skyBottom: new THREE.Color(0xf5975a),
+		skyCloudColor: new THREE.Color(0xf8b38a), cloudsColor: new THREE.Color(0xedaa7e),
+		bodyRim: new THREE.Color(0x21d9ff),
 	},
 	{
 		name: 'Twilight',
-		skyTop: new THREE.Color(0x383679), skyBottom: new THREE.Color(0x6c558d),
-		skyCloudColor: new THREE.Color(0x78528c), cloudsColor: new THREE.Color(0x58407b),
+		skyTop: new THREE.Color(0x33306f), skyBottom: new THREE.Color(0x74538c),
+		skyCloudColor: new THREE.Color(0x7d5590), cloudsColor: new THREE.Color(0x55407a),
 		bodyRim: new THREE.Color(0xffd166),
 	},
 	{
 		name: 'Aurora',
-		skyTop: new THREE.Color(0x041a36), skyBottom: new THREE.Color(0x118a72),
-		skyCloudColor: new THREE.Color(0x9affe6), cloudsColor: new THREE.Color(0x55ffd0),
+		skyTop: new THREE.Color(0x05203f), skyBottom: new THREE.Color(0x129074),
+		skyCloudColor: new THREE.Color(0x96ffe4), cloudsColor: new THREE.Color(0x63f5cf),
 		bodyRim: new THREE.Color(0xff4fd8),
+	},
+	{
+		// The danger card for the drop-driven palette slams: near-black plum over
+		// a burning horizon, scorched clouds, mint rim cutting through the heat.
+		name: 'Ember',
+		skyTop: new THREE.Color(0x200913), skyBottom: new THREE.Color(0xd14a2b),
+		skyCloudColor: new THREE.Color(0xe8794f), cloudsColor: new THREE.Color(0x8c3430),
+		bodyRim: new THREE.Color(0x3dffb0),
 	},
 ]
 
