@@ -11,6 +11,7 @@ export default class CameraRig {
 		this.lookY = 0
 		this.shotSpeedMult = 1
 		this.shotBobMult = 1
+		this.bobOffset = 0
 		this.orbitDir = 1   // +1 / -1, re-rolled by the Director on each cut
 		// Head-tracked "face" shot: set by the Director ({dist, fresh}), null = orbit.
 		// this.body is wired by the scene after construction.
@@ -70,6 +71,7 @@ export default class CameraRig {
 		this.orbit.verticalPhase += dt * p.verticalSpeed
 		const { angle, radius, baseHeight, verticalPhase } = this.orbit
 		const bob = (Math.sin(verticalPhase) * p.verticalAmp + features.energy * p.verticalEnergyMult) * this.shotBobMult
+		this.bobOffset = bob   // read by Clouds- the sprite field rides the bob
 		this.camera.position.set(Math.sin(angle) * radius, baseHeight + bob, Math.cos(angle) * radius)
 		this.camera.lookAt(0, this.lookY, 0)
 	}

@@ -108,6 +108,7 @@ export default class Gui {
 				bodyFolder.addBinding(b.rim, 'strength', { min: 0, max: 4, step: 0.05 }),
 				bodyFolder.addBinding(b.rim, 'kickHardMult', { min: 0, max: 4, step: 0.05 }),
 				bodyFolder.addBinding(b.rim, 'shading', { min: 0, max: 0.9, step: 0.01 }),
+				bodyFolder.addBinding(b.rim, 'ambient', { min: 0, max: 1, step: 0.01 }),
 			],
 			normal: [
 				bodyFolder.addBinding(b.normal, 'wireframe').on('change', onProp('wireframe', b.normal)),

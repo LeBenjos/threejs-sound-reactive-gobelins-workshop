@@ -9,6 +9,7 @@ export default class Sky {
 	constructor(scene, params) {
 		this.params = params
 		this.time = 0
+		this.churn = 0   // warp clock- cumulus shapes boil, faster with the energy
 		const geometry = new THREE.PlaneGeometry(2, 2)
 		const material = new THREE.ShaderMaterial({
 			uniforms: THREE.UniformsUtils.clone(SkyShader.uniforms),
@@ -41,8 +42,10 @@ export default class Sky {
 		const floor = this.params.audio.floor
 		const base = p.scrollSpeedBase * (floor + (1 - floor) * features.energy)
 		this.time += dt * (base + features.energy * p.scrollEnergyMult + features.flow * p.scrollKickMult * features.energy)
+		this.churn += dt * (0.05 + features.energy * 0.25)
 		const u = this.uniforms
 		u.time.value = this.time
+		u.churnTime.value = this.churn
 		u.cloudScale.value = p.cloudScale
 		// Clamped at white: past 1.0 the cloud tint burns the whole frame out and
 		// the sky gradient disappears- the "wall of white" during intense passages.

@@ -16,6 +16,8 @@ export default {
 		rimStrength: { value: 1.2 },
 		lightDir: { value: new THREE.Vector3(0.5, 0.8, 0.3).normalize() },   // VIEW space- set per frame
 		shading: { value: 0.45 },   // 0 = flat, →1 = high-contrast modeling
+		ambientColor: { value: new THREE.Color(0xffffff) },   // the preset's horizon- lerped with the color cycle
+		ambientTint: { value: 0.3 },   // 0 = pure white body, →1 = fully bathed in the scene's light
 	},
 	vertexShader: /* glsl */`
 		#include <common>
@@ -45,6 +47,8 @@ export default {
 		uniform float rimStrength;
 		uniform vec3 lightDir;
 		uniform float shading;
+		uniform vec3 ambientColor;
+		uniform float ambientTint;
 		varying vec3 vNormal;
 		varying vec3 vViewPos;
 		void main() {
@@ -60,7 +64,11 @@ export default {
 			// across the body.
 			float ndl = dot( n, normalize( lightDir ) ) * 0.5 + 0.5;
 			float shade = mix( 1.0 - shading, 1.0, ndl );
-			vec3 col = baseColor * shade + rimColor * fresnel * rimStrength;
+			// The body bathes in the scene's ambient light: the preset's horizon
+			// color multiplies the base (never brightens- the bloom threshold
+			// contract on max luminance still holds).
+			vec3 tinted = baseColor * mix( vec3( 1.0 ), ambientColor, ambientTint );
+			vec3 col = tinted * shade + rimColor * fresnel * rimStrength;
 			gl_FragColor = vec4( col, 1.0 );
 		}
 	`,

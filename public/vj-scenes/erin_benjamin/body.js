@@ -108,15 +108,19 @@ export default class Body {
 			u.rimStrength.value = r.strength + audio.kickHard * r.kickHardMult * features.energy
 			u.rimPower.value = r.power
 			u.shading.value = r.shading
+			u.ambientTint.value = r.ambient
 			u.lightDir.value.copy(this.lightScratch.copy(this.lightDirWorld).transformDirection(camera.matrixWorldInverse))
 		}
 	}
 
-	// Lerp the rim color between two presets at factor f (0=A, 1=B). No-op for
-	// the non-rim materials.
+	// Lerp the rim + ambient colors between two presets at factor f (0=A, 1=B).
+	// The ambient is the preset's horizon (skyBottom)- the body bathes in the
+	// scene's light. No-op for the non-rim materials.
 	lerpColors(A, B, f) {
 		const u = this.mat?.uniforms
-		if (u?.rimColor) u.rimColor.value.copy(A.bodyRim).lerp(B.bodyRim, f)
+		if (!u?.rimColor) return
+		u.rimColor.value.copy(A.bodyRim).lerp(B.bodyRim, f)
+		u.ambientColor.value.copy(A.skyBottom).lerp(B.skyBottom, f)
 	}
 
 	normalize() {
@@ -192,10 +196,13 @@ export default class Body {
 					fragmentShader: RimShader.fragmentShader,
 				})
 				mat.uniforms.baseColor.value.set(b.rim.baseColor)
-				// Start from the active preset's rim color- the autopilot color cycle
-				// keeps it in sync afterwards.
+				// Start from the active preset's colors- the autopilot color cycle
+				// keeps them in sync afterwards.
 				const preset = COLOR_PRESETS[this.params.autopilot.preset]
-				if (preset) mat.uniforms.rimColor.value.copy(preset.bodyRim)
+				if (preset) {
+					mat.uniforms.rimColor.value.copy(preset.bodyRim)
+					mat.uniforms.ambientColor.value.copy(preset.skyBottom)
+				}
 				return mat
 			}
 			case 'normal': return new THREE.MeshNormalMaterial({ wireframe: b.normal.wireframe, flatShading: b.normal.flatShading })
