@@ -92,8 +92,15 @@ export default class Director {
 			else this.rig.orbit.radius += (this.drift.target - this.rig.orbit.radius) * k
 		}
 		if (this.accentTime >= this.accentDur) {
-			this.enterBase()
-			this.cooldown = p.accentCooldown
+			// An expiring accent may chain straight into another shot (montage
+			// burst)- the chance decays geometrically, so base stays the norm.
+			// The cooldown only arms when the camera actually returns home.
+			if (Math.random() < p.chainChance) {
+				this.enterAccent(features.energy)
+			} else {
+				this.enterBase()
+				this.cooldown = p.accentCooldown
+			}
 		}
 	}
 
@@ -113,11 +120,12 @@ export default class Director {
 		this.baseRecutAt = rand(15, 25)
 	}
 
-	// Hard-cut to an accent shot, picked by energy-blended rarity weights.
+	// Hard-cut to an accent shot, picked by energy-blended rarity weights
+	// (never the shot already running- matters when accents chain).
 	enterAccent(energy) {
 		let total = 0
 		const weights = ACCENT_SHOTS.map((s) => {
-			const w = s.calm + (s.intense - s.calm) * energy
+			const w = s === this.shot ? 0 : s.calm + (s.intense - s.calm) * energy
 			total += w
 			return w
 		})
