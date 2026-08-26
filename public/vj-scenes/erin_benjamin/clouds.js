@@ -79,8 +79,11 @@ export default class Clouds {
 		// World-space rise scaled by per-layer speedMult: near layers run faster
 		// than far ones, multiplying the natural perspective parallax into a true
 		// layered effect. Each cloud recycles within its own band so layers stay
-		// visually coherent over time. Rise speed follows the passage energy.
-		const baseRise = p.riseSpeedBase + features.energy * p.riseEnergyMult + audio.kick * p.riseKickMult * features.energy
+		// visually coherent over time. Rise speed follows the passage energy, and
+		// the BASE speed itself sinks toward `floor` when the music goes silent.
+		const floor = this.params.audio.floor
+		const base = p.riseSpeedBase * (floor + (1 - floor) * features.energy)
+		const baseRise = base + features.energy * p.riseEnergyMult + audio.kick * p.riseKickMult * features.energy
 		const baseDy = dt * baseRise
 		for (const cloud of this.group.children) {
 			const layer = CLOUD_LAYERS[cloud.userData.layerIndex]

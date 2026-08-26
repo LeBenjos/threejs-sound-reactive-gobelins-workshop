@@ -51,10 +51,11 @@ export const COLOR_PRESETS = [
 // autopilot, read every frame by the modules' update() methods.
 export function createDefaultParams() {
 	return {
-		// AudioFeatures calibration: per-band gains compensate the spectral tilt;
-		// quiet/loud bracket the raw spectrum mean (calibrate with the GUI meters);
-		// attack/release are the energy envelope's ramp-up / settle times (seconds).
-		audio: { bassGain: 1.3, midGain: 2.2, highGain: 3.2, quiet: 0.08, loud: 0.35, attack: 0.35, release: 2.0 },
+		// AudioFeatures calibration: quiet/loud bracket the spectrum level as
+		// FRACTIONS of the track's own recent peak (watch the GUI meters);
+		// attack/release are the energy envelope's ramp-up / settle times (seconds);
+		// floor is the share of base background speed kept when the music is silent.
+		audio: { quiet: 0.25, loud: 0.75, attack: 0.4, release: 2.0, floor: 0.15 },
 		autopilot: { enabled: true, speed: 0.5, colorCycle: true, preset: 0, switchInterval: PRESET_HOLD_SECONDS },
 		body: {
 			material: 'normal',
@@ -86,9 +87,9 @@ export function createDefaultParams() {
 			opacity: 0.85,
 			color: '#ffffff',
 		},
-		bloom: { enabled: true, strengthBase: 0.15, energyMult: 0.35, kickHardMult: 1.2, radius: 1.50, threshold: 0.10 },
+		bloom: { enabled: true, strengthBase: 0.15, energyMult: 0.35, kickHardMult: 2.2, radius: 1.50, threshold: 0.10 },
 		afterimage: { enabled: true, dampBase: 0.85, kickHardMult: 0.2 },
 		rgbShift: { enabled: true, highMult: 0.006, angle: 1.98 },
-		fisheye: { enabled: true, strengthBase: 1.0, energyMult: 0.45, kickHardMult: 0.8 },
+		fisheye: { enabled: true, strengthBase: 1.0, energyMult: 0.45, kickHardMult: 1.3 },
 	}
 }
