@@ -40,11 +40,7 @@ export default class CameraRig {
 			this.body.getHeadPosition(this.headPos)
 			this.body.getHeadQuaternion(this.headQuat)
 			this.faceDir.copy(this.faceAxis).applyQuaternion(this.headQuat).normalize()
-			if (t.kind === 'pov') {
-				// Through their eyes: sit just outside the face, look where it points.
-				this.desiredPos.copy(this.headPos).addScaledVector(this.faceDir, t.dist)
-				this.lookScratch.copy(this.headPos).addScaledVector(this.faceDir, 10)
-			} else if (t.kind === 'below') {
+			if (t.kind === 'below') {
 				// Under the falling body, silhouetted against the sky above.
 				this.desiredPos.set(t.side, -t.dist, t.side2)
 				this.lookScratch.copy(this.headPos)

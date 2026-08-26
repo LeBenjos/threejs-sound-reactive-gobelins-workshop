@@ -15,11 +15,9 @@ const SHOTS = [
 	// dolly: radius glides from radius[0] toward radius[1] over the shot.
 	{ name: 'dolly', radius: [6.5, 2.5], height: [0.4, 0.9], lookY: 0.1, speedMult: 0.35, bobMult: 0.5, dolly: true, calm: 3, intense: 1 },
 	// Bone-tracked shots (kind handled by the CameraRig):
-	// face- in front of the head, looking at it. pov- through their eyes,
-	// clouds rushing in. below- under the falling body, silhouette against the
-	// sky. hand- close on a hand, the body behind.
+	// face- in front of the head, looking at it. below- under the falling
+	// body, silhouette against the sky. hand- close on a hand, the body behind.
 	{ name: 'face', track: 'face', dist: [0.9, 1.4], calm: 1, intense: 2 },
-	{ name: 'pov', track: 'pov', dist: [0.2, 0.35], calm: 1, intense: 2 },
 	{ name: 'below', track: 'below', dist: [2.2, 3.2], calm: 2, intense: 2 },
 	{ name: 'hand', track: 'hand', dist: [0.5, 0.9], calm: 2, intense: 1 },
 ]
