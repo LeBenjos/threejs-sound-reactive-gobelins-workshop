@@ -67,7 +67,8 @@ export default class Sky {
 		u.cloudScale.value = p.cloudScale
 		// Clamped at white: past 1.0 the cloud tint burns the whole frame out and
 		// the sky gradient disappears- the "wall of white" during intense passages.
-		u.brightness.value = Math.min(1, p.brightnessBase + features.energy * p.brightnessEnergyMult)
+		// The drop flash rides ABOVE the white clamp on purpose- a brief burst.
+		u.brightness.value = Math.min(1, p.brightnessBase + features.energy * p.brightnessEnergyMult) + features.dropPulse * 0.8
 		// Intense passages thin the cloud cover (see SkyShader): speed reads
 		// through fewer, denser clouds- not through more noise.
 		u.coverageShift.value = features.energy * 0.17

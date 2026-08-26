@@ -182,7 +182,10 @@ export default class Body {
 
 	update(dt, audio, features, camera) {
 		if (this.mixer) {
-			this.mixer.timeScale = features.rate   // the fall itself follows the track's tempo
+			// The fall follows the track's tempo AND its intensity: a breakdown
+			// suspends the body in slow motion, the drop releases it full speed.
+			const s = this.params.body.slowMo
+			this.mixer.timeScale = features.rate * (s + (1 - s) * features.energy)
 			this.mixer.update(dt)
 		}
 		// Held event (flying) running out → glide back to the base fall.
@@ -202,7 +205,7 @@ export default class Body {
 		const u = this.mat?.uniforms
 		if (u?.rimStrength) {
 			const r = this.params.body.rim
-			u.rimStrength.value = r.strength + audio.kickHard * r.kickHardMult * features.energy
+			u.rimStrength.value = r.strength + audio.kickHard * r.kickHardMult * features.energy + features.dropPulse * 2
 			u.rimPower.value = r.power
 			u.shading.value = r.shading
 			u.ambientTint.value = r.ambient

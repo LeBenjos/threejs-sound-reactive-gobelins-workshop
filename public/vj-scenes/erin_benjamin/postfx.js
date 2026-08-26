@@ -71,7 +71,7 @@ export default class PostFX {
 		// RGB shift follows the highs (hats/cymbals), the fisheye breathes with
 		// the energy and only kickHard still punches it.
 		// bloomPass lives in bloomComposer- merge pass gates the visual on/off.
-		this.bloomPass.strength = p.bloom.strengthBase + e * p.bloom.energyMult + audio.kickHard * p.bloom.kickHardMult * e
+		this.bloomPass.strength = p.bloom.strengthBase + e * p.bloom.energyMult + audio.kickHard * p.bloom.kickHardMult * e + features.dropPulse * 2.5
 		this.bloomPass.radius = p.bloom.radius
 		this.bloomPass.threshold = p.bloom.threshold
 		this.bloomMergePass.enabled = p.bloom.enabled

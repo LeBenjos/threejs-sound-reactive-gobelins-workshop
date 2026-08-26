@@ -83,6 +83,7 @@ export function createDefaultParams() {
 			material: 'rim',
 			bassScale: 0.55,
 			drift: 0.35,   // lateral wind-drift amplitude of the whole body
+			slowMo: 0.35,  // animation speed floor at zero energy- breakdowns suspend the fall
 			rim: { baseColor: '#d5d5dd', power: 3.0, strength: 1.4, kickHardMult: 1.5, shading: 0.45, ambient: 0.65 },
 			normal: { wireframe: false, flatShading: false },
 			basic: { color: '#ffffff', wireframe: false },

@@ -96,6 +96,14 @@ export default class ErinBenjaminScene {
 		this.driftPhase = (this.driftPhase ?? 0) + dt
 		const drift = this.params.body.drift
 		this.pivot.position.set(Math.sin(this.driftPhase * 0.31) * drift, 0, Math.sin(this.driftPhase * 0.23 + 1.3) * drift)
+		// A detected drop is a MOMENT: hard palette switch + camera accent (the
+		// flash itself rides features.dropPulse inside sky/bloom/rim).
+		if (this.features.dropPulse > 0.9 && this.prevDropPulse <= 0.9) {
+			this.autopilot.skipToNext()
+			if (this.director.mode === 'base') this.director.enterAccent(this.features.energy)
+		}
+		this.prevDropPulse = this.features.dropPulse
+
 		this.events.update(dt, a, this.features)
 		this.director.update(dt, a, this.features)
 		this.cameraRig.update(dt, a, this.features)

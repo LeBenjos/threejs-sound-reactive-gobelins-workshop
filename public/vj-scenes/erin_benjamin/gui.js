@@ -51,6 +51,7 @@ export default class Gui {
 		audioFolder.addBinding(features, 'high', { readonly: true, view: 'graph', min: 0, max: 1 })
 		audioFolder.addBinding(features, 'bpm', { readonly: true, view: 'graph', min: 60, max: 200 })
 		audioFolder.addBinding(features, 'rate', { readonly: true, view: 'graph', min: 0.5, max: 1.6 })
+		audioFolder.addBinding(features, 'dropPulse', { readonly: true, view: 'graph', min: 0, max: 1 })
 		audioFolder.addBinding(params.audio, 'quiet', { min: 0, max: 1, step: 0.01 })
 		audioFolder.addBinding(params.audio, 'loud', { min: 0.1, max: 1, step: 0.01 })
 		audioFolder.addBinding(params.audio, 'attack', { min: 0.05, max: 2, step: 0.05 })
@@ -87,6 +88,7 @@ export default class Gui {
 		const bodyFolder = this.pane.addFolder({ title: 'Body', expanded: false })
 		bodyFolder.addBinding(params.body, 'bassScale', { min: 0, max: 2, step: 0.05 })
 		bodyFolder.addBinding(params.body, 'drift', { min: 0, max: 1.2, step: 0.05 })
+		bodyFolder.addBinding(params.body, 'slowMo', { min: 0.1, max: 1, step: 0.05 })
 		bodyFolder.addBinding(params.body, 'material', {
 			options: { rim: 'rim', normal: 'normal', basic: 'basic', wireframe: 'wireframe', depth: 'depth' },
 		}).on('change', (ev) => {

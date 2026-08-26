@@ -20,6 +20,8 @@ export default class AudioFeatures {
 		this.bpm = 100    // live tempo estimate from kick intervals
 		this.pace = 0.5   // bpm normalized between bpmSlow..bpmFast, eased
 		this.rate = 1     // global world-speed multiplier derived from pace
+		this.dropPulse = 0   // 1 on a detected drop, decays over ~0.7s
+		this.quietTime = 0   // seconds spent below the quiet threshold
 		this.peaks = { bass: 0.05, mid: 0.05, high: 0.05, energy: 0.05 }
 		this.floorLevel = 0.05   // slow-rising minimum tracker- see update()
 		this.time = 0
@@ -98,6 +100,17 @@ export default class AudioFeatures {
 		const pt = Math.min(1, Math.max(0, (this.bpm - p.bpmSlow) / Math.max(1, p.bpmFast - p.bpmSlow)))
 		this.pace = follow(this.pace, pt, dt, 1.0, 1.5)
 		this.rate = p.rateMin + (p.rateMax - p.rateMin) * this.pace
+
+		// Drop detection: energy surging hot after a sustained quiet stretch.
+		// dropPulse spikes to 1 and decays- consumers watch its rising edge for
+		// one-shot moments (palette switch, camera accent) and use its value as
+		// a flash envelope.
+		if (this.energy < 0.4) this.quietTime += dt
+		else if (this.energy > 0.72) {
+			if (this.quietTime > 1.5) this.dropPulse = 1
+			this.quietTime = 0
+		}
+		this.dropPulse = Math.max(0, this.dropPulse - dt * 1.5)
 	}
 
 }

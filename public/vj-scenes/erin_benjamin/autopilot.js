@@ -21,6 +21,15 @@ export default class Autopilot {
 		this.presetTimer = 0
 	}
 
+	// Hard palette switch on a musical drop: jump straight to the next preset
+	// (the per-frame color mix follows immediately) and restart the dwell.
+	skipToNext() {
+		const p = this.params.autopilot
+		p.preset = (p.preset + 1) % COLOR_PRESETS.length
+		this.presetTimer = 0
+		this.onPresetAdvanced?.(p.preset)
+	}
+
 	update(dt) {
 		this.phase += dt * this.params.autopilot.speed
 		const phase = this.phase
