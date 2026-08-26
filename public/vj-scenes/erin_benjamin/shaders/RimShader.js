@@ -16,8 +16,8 @@ export default {
 		rimStrength: { value: 1.2 },
 		lightDir: { value: new THREE.Vector3(0.5, 0.8, 0.3).normalize() },   // VIEW space- set per frame
 		shading: { value: 0.45 },   // 0 = flat, →1 = high-contrast modeling
-		ambientColor: { value: new THREE.Color(0xffffff) },   // the preset's horizon- lerped with the color cycle
-		ambientTint: { value: 0.3 },   // 0 = pure white body, →1 = fully bathed in the scene's light
+		ambientColor: { value: new THREE.Color(0xffffff) },   // the preset's skyTop- lerped with the color cycle
+		ambientTint: { value: 0.5 },   // 0 = pure white body, →1 = fully bathed in the scene's light
 	},
 	vertexShader: /* glsl */`
 		#include <common>

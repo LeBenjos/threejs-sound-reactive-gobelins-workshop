@@ -91,7 +91,7 @@ export default class ErinBenjaminScene {
 		this.director.update(dt, a, this.features)
 		this.cameraRig.update(dt, a, this.features)
 		this.sky.update(dt, a, this.features)
-		this.clouds.update(dt, a, this.features, this.cameraRig)
+		this.clouds.update(dt, a, this.features, this.cameraRig.camera)
 		this.postfx.update(a, this.features)
 		this.postfx.render(dt)
 	}

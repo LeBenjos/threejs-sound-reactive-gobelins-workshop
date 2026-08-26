@@ -17,6 +17,10 @@ export default class Clouds {
 		this.mixScratch = new THREE.Color()      // reused per-frame by lerpColors to avoid GC
 		this.shadowScratch = new THREE.Color()   // same, for the sprites' underside tint
 		this.churn = 0   // internal-billow clock- advances with the energy (see update)
+		// Orbital follow state: the field tracks HALF the camera's azimuth sweep
+		// (see update)- prevAzimuth is null until the first frame.
+		this.followAngle = 0
+		this.prevAzimuth = null
 		this.populate()
 	}
 
@@ -90,15 +94,30 @@ export default class Clouds {
 		}
 	}
 
-	update(dt, audio, features, rig) {
+	update(dt, audio, features, camera) {
 		const p = this.params.clouds
 		this.group.visible = p.enabled
 		if (!p.enabled) return
-		// The field rides the camera's vertical bob: otherwise the bob overtakes
-		// the slow far layers and they visibly DESCEND on screen while the near
-		// ones still rise- reads as broken. Riding it keeps every layer's
-		// apparent motion strictly upward; the bob stays visible on the body.
-		this.group.position.y = rig.bobOffset
+		// The field is vertically LOCKED to the camera (bob, bone-tracked shots,
+		// director height changes- all of it): otherwise camera vertical motion
+		// overtakes the slow far layers and they visibly fall on screen, reading
+		// as broken. Locked, the only apparent vertical motion left is the
+		// clouds' own world rise- and the band stays centered on the camera at
+		// any shot height. Horizontal parallax (orbit, dolly) is untouched.
+		this.group.position.y = camera.position.y
+		// The field also follows HALF the camera's orbital sweep (wind-like
+		// circulation). On tilted shots the orbit projects as screen-space arcs-
+		// clouds rising on one side of the frame, falling on the other- which
+		// breaks the "everything rises" reading; halving the relative angular
+		// speed halves those arcs while keeping the horizontal parallax alive.
+		const az = Math.atan2(camera.position.x, camera.position.z)
+		if (this.prevAzimuth === null) this.prevAzimuth = az
+		let dAz = az - this.prevAzimuth
+		if (dAz > Math.PI) dAz -= Math.PI * 2
+		else if (dAz < -Math.PI) dAz += Math.PI * 2
+		this.prevAzimuth = az
+		this.followAngle += dAz * 0.5
+		this.group.rotation.y = this.followAngle
 		// World-space rise scaled by per-layer speedMult: near layers run faster
 		// than far ones, multiplying the natural perspective parallax into a true
 		// layered effect. Each cloud recycles within its own band so layers stay
@@ -110,7 +129,7 @@ export default class Clouds {
 		const baseDy = dt * baseRise
 		// Sprites ease back as the energy rises: at full intensity they streak as
 		// translucent accents instead of stacking a second wall over the FBM sky.
-		const spriteOpacity = p.opacity * (1 - 0.35 * features.energy)
+		const spriteOpacity = p.opacity * (1 - 0.25 * features.energy)
 		// Placid billows when calm, boiling on the drops.
 		this.churn += dt * (0.06 + features.energy * 0.3)
 		for (const cloud of this.group.children) {
@@ -127,20 +146,27 @@ export default class Clouds {
 			// their band and dissolve before the recycle teleport at the top- no
 			// visible spawn/despawn pop whatever the camera angle. Respawn happens
 			// exactly at ±yRange, where this envelope is zero.
-			const edgeFade = 1 - THREE.MathUtils.smoothstep(Math.abs(cloud.position.y), layer.yRange * 0.75, layer.yRange)
+			const edgeFade = 1 - THREE.MathUtils.smoothstep(Math.abs(cloud.position.y), layer.yRange * 0.85, layer.yRange)
 			cloud.material.uniforms.opacity.value = spriteOpacity * edgeFade
 			cloud.material.uniforms.time.value = this.churn
 		}
-		this.billboard(rig.camera)
+		this.billboard(camera)
 	}
 
 	// Cylindrical billboard: rotate only around world Y to face camera. Keeps clouds
 	// upright (no roll) even when the camera bobs, which matches "real" cloud sprites.
+	// The group carries a Y rotation (orbital follow), so local positions are rotated
+	// to world before aiming, and the group rotation is subtracted from the yaw.
 	billboard(camera) {
 		const cx = camera.position.x
 		const cz = camera.position.z
+		const R = this.group.rotation.y
+		const cosR = Math.cos(R)
+		const sinR = Math.sin(R)
 		for (const cloud of this.group.children) {
-			cloud.rotation.y = Math.atan2(cx - cloud.position.x, cz - cloud.position.z)
+			const wx = cosR * cloud.position.x + sinR * cloud.position.z
+			const wz = -sinR * cloud.position.x + cosR * cloud.position.z
+			cloud.rotation.y = Math.atan2(cx - wx, cz - wz) - R
 		}
 	}
 

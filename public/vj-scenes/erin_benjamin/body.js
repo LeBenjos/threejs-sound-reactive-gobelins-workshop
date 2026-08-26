@@ -114,13 +114,14 @@ export default class Body {
 	}
 
 	// Lerp the rim + ambient colors between two presets at factor f (0=A, 1=B).
-	// The ambient is the preset's horizon (skyBottom)- the body bathes in the
-	// scene's light. No-op for the non-rim materials.
+	// The ambient is the preset's skyTop- the palette's signature color, far
+	// more saturated than the pale horizon- so the body visibly carries the
+	// scene's mood. No-op for the non-rim materials.
 	lerpColors(A, B, f) {
 		const u = this.mat?.uniforms
 		if (!u?.rimColor) return
 		u.rimColor.value.copy(A.bodyRim).lerp(B.bodyRim, f)
-		u.ambientColor.value.copy(A.skyBottom).lerp(B.skyBottom, f)
+		u.ambientColor.value.copy(A.skyTop).lerp(B.skyTop, f)
 	}
 
 	normalize() {
@@ -201,7 +202,7 @@ export default class Body {
 				const preset = COLOR_PRESETS[this.params.autopilot.preset]
 				if (preset) {
 					mat.uniforms.rimColor.value.copy(preset.bodyRim)
-					mat.uniforms.ambientColor.value.copy(preset.skyBottom)
+					mat.uniforms.ambientColor.value.copy(preset.skyTop)
 				}
 				return mat
 			}

@@ -3,7 +3,7 @@ import * as THREE from 'three'
 export const TARGET_HEIGHT = 2   // body normalized to ~2 world units tall
 export const BLOOM_LAYER = 1     // body meshes get this layer- bloomComposer renders only it
 // Default total cloud count- live-tunable via params.clouds.count.
-export const CLOUD_COUNT_DEFAULT = 180
+export const CLOUD_COUNT_DEFAULT = 260
 export const PRESET_HOLD_SECONDS = 22   // dwell on one preset before lerping to the next (at autopilot speed=1)
 
 // Discrete parallax depth layers (near -> horizon). Each band gets its own
@@ -13,11 +13,11 @@ export const PRESET_HOLD_SECONDS = 22   // dwell on one preset before lerping to
 // splits the total count across layers (must roughly sum to 1). Weights are
 // biased toward far layers so the depth dominates the visual.
 export const CLOUD_LAYERS = [
-	{ radiusMin: 2, radiusMax: 6, yRange: 8, scaleMin: 1.0, scaleMax: 2.2, speedMult: 1.9, countShare: 0.18 },
-	{ radiusMin: 5, radiusMax: 12, yRange: 12, scaleMin: 1.8, scaleMax: 3.8, speedMult: 1.0, countShare: 0.22 },
+	{ radiusMin: 2, radiusMax: 6, yRange: 8, scaleMin: 1.0, scaleMax: 2.2, speedMult: 1.9, countShare: 0.20 },
+	{ radiusMin: 5, radiusMax: 12, yRange: 12, scaleMin: 1.8, scaleMax: 3.8, speedMult: 1.0, countShare: 0.24 },
 	{ radiusMin: 11, radiusMax: 24, yRange: 20, scaleMin: 3.2, scaleMax: 6.5, speedMult: 0.55, countShare: 0.22 },
-	{ radiusMin: 22, radiusMax: 48, yRange: 32, scaleMin: 5.5, scaleMax: 11.0, speedMult: 0.28, countShare: 0.20 },
-	{ radiusMin: 42, radiusMax: 85, yRange: 50, scaleMin: 9.0, scaleMax: 18.0, speedMult: 0.13, countShare: 0.18 },
+	{ radiusMin: 22, radiusMax: 48, yRange: 32, scaleMin: 5.5, scaleMax: 13.0, speedMult: 0.28, countShare: 0.19 },
+	{ radiusMin: 42, radiusMax: 85, yRange: 50, scaleMin: 9.0, scaleMax: 22.0, speedMult: 0.13, countShare: 0.15 },
 ]
 
 // Sky + cloud color palettes. Autopilot cycles between them (smooth lerp) when
@@ -71,7 +71,7 @@ export function createDefaultParams() {
 		body: {
 			material: 'rim',
 			bassScale: 0.55,
-			rim: { baseColor: '#d5d5dd', power: 3.0, strength: 1.4, kickHardMult: 1.5, shading: 0.45, ambient: 0.3 },
+			rim: { baseColor: '#d5d5dd', power: 3.0, strength: 1.4, kickHardMult: 1.5, shading: 0.45, ambient: 0.5 },
 			normal: { wireframe: false, flatShading: false },
 			basic: { color: '#ffffff', wireframe: false },
 			wireframe: { color: '#ffffff' },
