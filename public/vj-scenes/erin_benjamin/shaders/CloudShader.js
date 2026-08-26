@@ -10,9 +10,12 @@ export default {
 	},
 	vertexShader: /* glsl */`
 		varying vec2 vUv;
+		varying vec3 vViewPos;
 		void main() {
 			vUv = uv;
-			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+			vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+			vViewPos = mvPosition.xyz;
+			gl_Position = projectionMatrix * mvPosition;
 		}
 	`,
 	fragmentShader: /* glsl */`
@@ -20,6 +23,7 @@ export default {
 		uniform float opacity;
 		uniform vec3 cloudColor;
 		varying vec2 vUv;
+		varying vec3 vViewPos;
 
 		float hash( vec2 p ) {
 			return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 );
@@ -53,7 +57,12 @@ export default {
 			// Per-instance noise sample with seed offset for variation.
 			float n = fbm( vUv * 3.0 + vec2( seed * 7.3, seed * 2.1 ) );
 			float puff = smoothstep( 0.3, 0.7, n );
-			float alpha = disk * puff * opacity;
+			// The close camera shots orbit INSIDE the near cloud band, so sprites
+			// can cross the lens: without this they pop in as huge dark blobs the
+			// instant the billboard flips past the camera. Dissolve them over the
+			// last 2 world units instead- fully gone before the near plane.
+			float nearFade = smoothstep( 0.7, 2.0, length( vViewPos ) );
+			float alpha = disk * puff * opacity * nearFade;
 			if ( alpha < 0.01 ) discard;   // avoid sorting artifacts on near-empty pixels
 			gl_FragColor = vec4( cloudColor, alpha );
 		}
