@@ -1,0 +1,89 @@
+import * as THREE from 'three'
+
+export const TARGET_HEIGHT = 2   // body normalized to ~2 world units tall
+export const BLOOM_LAYER = 1     // body meshes get this layer- bloomComposer renders only it
+// Default total cloud count- live-tunable via params.clouds.count.
+export const CLOUD_COUNT_DEFAULT = 180
+export const PRESET_HOLD_SECONDS = 22   // dwell on one preset before lerping to the next (at autopilot speed=1)
+
+// Discrete parallax depth layers (near -> horizon). Each band gets its own
+// radius/scale/height range and speed multiplier. Far layers are slower and
+// larger, near ones are fast and small: same world rise speed × per-layer
+// multiplier × audio reactivity produces the layered parallax. `countShare`
+// splits the total count across layers (must roughly sum to 1). Weights are
+// biased toward far layers so the depth dominates the visual.
+export const CLOUD_LAYERS = [
+	{ radiusMin: 2, radiusMax: 6, yRange: 8, scaleMin: 1.0, scaleMax: 2.2, speedMult: 1.9, countShare: 0.18 },
+	{ radiusMin: 5, radiusMax: 12, yRange: 12, scaleMin: 1.8, scaleMax: 3.8, speedMult: 1.0, countShare: 0.22 },
+	{ radiusMin: 11, radiusMax: 24, yRange: 20, scaleMin: 3.2, scaleMax: 6.5, speedMult: 0.55, countShare: 0.22 },
+	{ radiusMin: 22, radiusMax: 48, yRange: 32, scaleMin: 5.5, scaleMax: 11.0, speedMult: 0.28, countShare: 0.20 },
+	{ radiusMin: 42, radiusMax: 85, yRange: 50, scaleMin: 9.0, scaleMax: 18.0, speedMult: 0.13, countShare: 0.18 },
+]
+
+// Sky + cloud color palettes. Autopilot cycles between them (smooth lerp) when
+// colorCycle is on; the GUI dropdown picks one manually when it's off.
+// Each preset defines: sky top/bottom gradient, sky's internal FBM cloud tint,
+// and the 3D cloud sprite tint.
+export const COLOR_PRESETS = [
+	{
+		name: 'Daylight',
+		skyTop: new THREE.Color(0x6fb4ff), skyBottom: new THREE.Color(0xbfe1ff),
+		skyCloudColor: new THREE.Color(0xffffff), cloudsColor: new THREE.Color(0xffffff),
+	},
+	{
+		name: 'Sunset',
+		skyTop: new THREE.Color(0xeca36a), skyBottom: new THREE.Color(0xd895c6),
+		skyCloudColor: new THREE.Color(0xf4aea6), cloudsColor: new THREE.Color(0xeba599),
+	},
+	{
+		name: 'Twilight',
+		skyTop: new THREE.Color(0x383679), skyBottom: new THREE.Color(0x6c558d),
+		skyCloudColor: new THREE.Color(0x78528c), cloudsColor: new THREE.Color(0x58407b),
+	},
+	{
+		name: 'Aurora',
+		skyTop: new THREE.Color(0x041a36), skyBottom: new THREE.Color(0x118a72),
+		skyCloudColor: new THREE.Color(0x9affe6), cloudsColor: new THREE.Color(0x55ffd0),
+	},
+]
+
+// One mutable params tree per scene instance- mutated live by the GUI and the
+// autopilot, read every frame by the modules' update() methods.
+export function createDefaultParams() {
+	return {
+		autopilot: { enabled: true, speed: 0.5, colorCycle: true, preset: 0, switchInterval: PRESET_HOLD_SECONDS },
+		body: {
+			material: 'normal',
+			normal: { wireframe: false, flatShading: false },
+			basic: { color: '#ffffff', wireframe: false },
+			wireframe: { color: '#ffffff' },
+			depth: { wireframe: false },
+		},
+		camera: { baseSpeed: 0.2, kickMult: 2.0, verticalSpeed: 0.26, verticalAmp: 0.85, verticalVolumeMult: 0.5 },
+		sky: {
+			enabled: true,
+			scrollSpeedBase: 0.36,
+			scrollVolumeMult: 0.27,
+			scrollKickMult: 0.7,
+			cloudScale: 8.0,
+			brightnessBase: 0.57,
+			brightnessVolumeMult: 0.6,
+			topColor: '#6fb4ff',
+			bottomColor: '#bfe1ff',
+			cloudColor: '#ffffff',
+		},
+		clouds: {
+			enabled: true,
+			count: CLOUD_COUNT_DEFAULT,
+			riseSpeedBase: 1.6,
+			riseVolumeMult: 2.4,
+			riseKickMult: 4.0,
+			opacity: 0.85,
+			color: '#ffffff',
+		},
+		bloom: { enabled: true, strengthBase: 0.15, volumeMult: 0.50, kickMult: 1.50, radius: 1.50, threshold: 0.10 },
+		afterimage: { enabled: true, dampBase: 0.85, kickHardMult: 0.2 },
+		rgbShift: { enabled: true, kickMult: 0.005, angle: 1.98 },
+		fisheye: { enabled: true, strengthBase: 1.0, volumeMult: 0.2, kickMult: 0.65, kickHardMult: 1.46 },
+	}
+}

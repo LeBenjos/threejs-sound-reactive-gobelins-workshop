@@ -1,0 +1,97 @@
+import * as THREE from 'three'
+
+import Autopilot from './autopilot.js'
+import Body from './body.js'
+import CameraRig from './cameraRig.js'
+import Clouds from './clouds.js'
+import { createDefaultParams } from './config.js'
+import Gui from './gui.js'
+import PostFX from './postfx.js'
+import Sky from './sky.js'
+
+// Orchestrator: owns the renderer + the shared params tree, wires the modules
+// together and drives the Analyzer lifecycle (load → init/warmup → play/stop).
+export default class ErinBenjaminScene {
+
+	constructor(audio) {
+		this.audio = audio
+		this.params = createDefaultParams()
+		this.body = new Body(this.params)
+		this.renderer = null
+		this.scene = null
+		this.pivot = null
+		this.clock = null
+		this.cameraRig = null
+		this.sky = null
+		this.clouds = null
+		this.postfx = null
+		this.autopilot = null
+		this.gui = null
+		this.onResize = this.onResize.bind(this)
+	}
+
+	async load() {
+		await this.body.load()
+	}
+
+	init() {
+		this.renderer = new THREE.WebGLRenderer({ antialias: true })
+		this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+		this.renderer.setSize(innerWidth, innerHeight)
+		document.body.appendChild(this.renderer.domElement)
+
+		this.scene = new THREE.Scene()
+		this.cameraRig = new CameraRig(this.params)
+		this.sky = new Sky(this.scene, this.params)
+		this.clouds = new Clouds(this.scene, this.params)
+
+		this.pivot = new THREE.Group()
+		this.scene.add(this.pivot)
+		this.body.init(this.pivot)
+
+		this.postfx = new PostFX(this.renderer, this.scene, this.cameraRig.camera, this.params)
+		this.autopilot = new Autopilot(this.params, this.cameraRig.orbit, this.sky, this.clouds)
+		this.gui = new Gui(this)
+		this.autopilot.onPresetAdvanced = (idx) => this.gui.onPresetAdvanced(idx)
+
+		addEventListener('resize', this.onResize)
+	}
+
+	warmup() {
+		this.postfx.warmup()
+	}
+
+	play() {
+		this.clock = new THREE.Clock()   // fresh delta on every resume- no jump after a long stop()
+		this.renderer.setAnimationLoop(() => this.update())
+	}
+
+	stop() {
+		this.renderer.setAnimationLoop(null)
+	}
+
+	update() {
+		const a = this.audio // volume · volumeSmooth · kick · kickHard · volumeByFrequency
+		const dt = this.clock.getDelta()
+
+		this.body.update(dt)
+
+		// Autopilot first- mutates params so the audio-reactive logic below adds on top.
+		if (this.params.autopilot.enabled) this.autopilot.update(dt)
+
+		this.pivot.scale.setScalar(1 + a.volume * 0.4 + a.kick * 0.25)
+		this.cameraRig.update(dt, a)
+		this.sky.update(dt, a)
+		this.clouds.update(dt, a, this.cameraRig.camera)
+		this.postfx.update(a)
+		this.postfx.render(dt)
+	}
+
+	onResize() {
+		this.cameraRig.resize()
+		this.renderer.setSize(innerWidth, innerHeight)
+		this.postfx.resize()
+		this.sky.resize()
+	}
+
+}

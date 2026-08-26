@@ -1,0 +1,214 @@
+import { Pane } from 'tweakpane'
+
+import { COLOR_PRESETS } from './config.js'
+
+// The Tweakpane debug panel. Standalone-only: in host iframes the Analyzer runs
+// in 'receive' mode and no pane is built (every public method guards on it).
+// (audio.player would be a wrong gate- it's lazy-created only after the first
+// user gesture, well after init().)
+export default class Gui {
+
+	constructor(scene) {
+		this.scene = scene
+		this.pane = null
+		this.bodyMatBindings = null
+		// Hex mirrors of the currently-selected preset; bound to the "Edit preset" GUI.
+		// Initialized from preset 0 to match params.autopilot.preset default.
+		this.presetEditor = {
+			skyTop: '#' + COLOR_PRESETS[0].skyTop.getHexString(),
+			skyBottom: '#' + COLOR_PRESETS[0].skyBottom.getHexString(),
+			skyCloudColor: '#' + COLOR_PRESETS[0].skyCloudColor.getHexString(),
+			cloudsColor: '#' + COLOR_PRESETS[0].cloudsColor.getHexString(),
+		}
+		if (scene.audio?.mode !== 'live') return
+		this.build()
+	}
+
+	// Called by the autopilot color cycle each time it advances to the next preset.
+	onPresetAdvanced(idx) {
+		if (!this.pane) return
+		this.syncPresetEditor(idx)
+		this.pane.refresh()
+	}
+
+	build() {
+		const { params, body, cameraRig, sky, clouds, autopilot } = this.scene
+		this.pane = new Pane({ title: 'Postprocessing' })
+
+		const auto = this.pane.addFolder({ title: 'Autopilot' })
+		auto.addBinding(params.autopilot, 'enabled')
+		auto.addBinding(params.autopilot, 'speed', { min: 0, max: 3, step: 0.01 })
+		auto.addBinding(params.autopilot, 'colorCycle')
+		auto.addBinding(params.autopilot, 'switchInterval', { min: 2, max: 60, step: 0.5 })
+		// Manual preset selector- overridden live when colorCycle is on (the cycle
+		// keeps writing into the uniforms each frame).
+		const presetOptions = Object.fromEntries(COLOR_PRESETS.map((pst, i) => [pst.name, i]))
+		auto.addBinding(params.autopilot, 'preset', { options: presetOptions })
+			.on('change', (ev) => {
+				autopilot.resetPresetTimer()   // restart dwell window from this preset
+				this.applyColorPreset(ev.value)
+			})
+
+		// Edit the currently-selected preset live. Edits persist into COLOR_PRESETS
+		// so the autopilot cycle picks up the new values on the next loop.
+		const edit = auto.addFolder({ title: 'Edit preset', expanded: false })
+		edit.addBinding(this.presetEditor, 'skyTop', { view: 'color' }).on('change', () => this.editPresetColor('skyTop'))
+		edit.addBinding(this.presetEditor, 'skyBottom', { view: 'color' }).on('change', () => this.editPresetColor('skyBottom'))
+		edit.addBinding(this.presetEditor, 'skyCloudColor', { view: 'color' }).on('change', () => this.editPresetColor('skyCloudColor'))
+		edit.addBinding(this.presetEditor, 'cloudsColor', { view: 'color' }).on('change', () => this.editPresetColor('cloudsColor'))
+
+		const bodyFolder = this.pane.addFolder({ title: 'Body' })
+		bodyFolder.addBinding(params.body, 'material', {
+			options: { normal: 'normal', basic: 'basic', wireframe: 'wireframe', depth: 'depth' },
+		}).on('change', (ev) => {
+			body.setMaterial(ev.value)
+			this.refreshBodyMatBindings()
+		})
+
+		// Live updates: per-type bindings mutate the active material directly when
+		// it matches; switching types rebuilds the material from these stored params,
+		// so each preset keeps its own state across toggles.
+		const onProp = (prop, src) => () => {
+			if (body.mat && prop in body.mat) body.mat[prop] = src[prop]
+		}
+		const onColor = (src) => () => {
+			if (body.mat?.color) body.mat.color.set(src.color)
+		}
+		const onFlat = (src) => () => {
+			if (!body.mat || !('flatShading' in body.mat)) return
+			body.mat.flatShading = src.flatShading
+			body.mat.needsUpdate = true   // shader recompile- flatShading is a #define
+		}
+
+		const b = params.body
+		this.bodyMatBindings = {
+			normal: [
+				bodyFolder.addBinding(b.normal, 'wireframe').on('change', onProp('wireframe', b.normal)),
+				bodyFolder.addBinding(b.normal, 'flatShading').on('change', onFlat(b.normal)),
+			],
+			basic: [
+				bodyFolder.addBinding(b.basic, 'color', { view: 'color' }).on('change', onColor(b.basic)),
+				bodyFolder.addBinding(b.basic, 'wireframe').on('change', onProp('wireframe', b.basic)),
+			],
+			wireframe: [
+				bodyFolder.addBinding(b.wireframe, 'color', { view: 'color' }).on('change', onColor(b.wireframe)),
+			],
+			depth: [
+				bodyFolder.addBinding(b.depth, 'wireframe').on('change', onProp('wireframe', b.depth)),
+			],
+		}
+		this.refreshBodyMatBindings()
+
+		const cam = this.pane.addFolder({ title: 'Camera' })
+		cam.addBinding(params.camera, 'baseSpeed', { min: 0, max: 2, step: 0.01 })
+		cam.addBinding(params.camera, 'kickMult', { min: 0, max: 20, step: 0.1 })
+		cam.addBinding(params.camera, 'verticalSpeed', { min: 0, max: 2, step: 0.01 })
+		cam.addBinding(params.camera, 'verticalAmp', { min: 0, max: 6, step: 0.05 })
+		cam.addBinding(params.camera, 'verticalVolumeMult', { min: 0, max: 4, step: 0.05 })
+		cam.addBinding(cameraRig.orbit, 'radius', { min: 1, max: 10, step: 0.1 })
+		cam.addBinding(cameraRig.orbit, 'baseHeight', { min: -6, max: 8, step: 0.05 })
+
+		const skyFolder = this.pane.addFolder({ title: 'Sky' })
+		skyFolder.addBinding(params.sky, 'enabled')
+		skyFolder.addBinding(params.sky, 'scrollSpeedBase', { min: 0, max: 0.5, step: 0.005 })
+		skyFolder.addBinding(params.sky, 'scrollVolumeMult', { min: 0, max: 1, step: 0.01 })
+		skyFolder.addBinding(params.sky, 'scrollKickMult', { min: 0, max: 3, step: 0.05 })
+		skyFolder.addBinding(params.sky, 'cloudScale', { min: 0.5, max: 10, step: 0.1 })
+		skyFolder.addBinding(params.sky, 'brightnessBase', { min: 0, max: 1.5, step: 0.01 })
+		skyFolder.addBinding(params.sky, 'brightnessVolumeMult', { min: 0, max: 1.5, step: 0.01 })
+		skyFolder.addBinding(params.sky, 'topColor', { view: 'color' }).on('change', (ev) => {
+			sky.uniforms.skyTop.value.set(ev.value)
+		})
+		skyFolder.addBinding(params.sky, 'bottomColor', { view: 'color' }).on('change', (ev) => {
+			sky.uniforms.skyBottom.value.set(ev.value)
+		})
+		skyFolder.addBinding(params.sky, 'cloudColor', { view: 'color' }).on('change', (ev) => {
+			sky.uniforms.cloudColor.value.set(ev.value)
+		})
+
+		const cloudsFolder = this.pane.addFolder({ title: 'Clouds' })
+		cloudsFolder.addBinding(params.clouds, 'enabled')
+		cloudsFolder.addBinding(params.clouds, 'count', { min: 0, max: 200, step: 1 }).on('change', (ev) => {
+			if (ev.last) clouds.rebuild()   // rebuild only on release, not every tick
+		})
+		cloudsFolder.addBinding(params.clouds, 'riseSpeedBase', { min: 0, max: 6, step: 0.05 })
+		cloudsFolder.addBinding(params.clouds, 'riseVolumeMult', { min: 0, max: 8, step: 0.05 })
+		cloudsFolder.addBinding(params.clouds, 'riseKickMult', { min: 0, max: 12, step: 0.1 })
+		cloudsFolder.addBinding(params.clouds, 'opacity', { min: 0, max: 1, step: 0.01 })
+		cloudsFolder.addBinding(params.clouds, 'color', { view: 'color' }).on('change', (ev) => {
+			clouds.setColor(ev.value)
+		})
+
+		const bloom = this.pane.addFolder({ title: 'Bloom' })
+		bloom.addBinding(params.bloom, 'enabled')
+		bloom.addBinding(params.bloom, 'strengthBase', { min: 0, max: 3, step: 0.01 })
+		bloom.addBinding(params.bloom, 'volumeMult', { min: 0, max: 3, step: 0.01 })
+		bloom.addBinding(params.bloom, 'kickMult', { min: 0, max: 3, step: 0.01 })
+		bloom.addBinding(params.bloom, 'radius', { min: 0, max: 2, step: 0.01 })
+		bloom.addBinding(params.bloom, 'threshold', { min: 0, max: 1, step: 0.01 })
+
+		const after = this.pane.addFolder({ title: 'Afterimage' })
+		after.addBinding(params.afterimage, 'enabled')
+		after.addBinding(params.afterimage, 'dampBase', { min: 0, max: 0.99, step: 0.01 })
+		after.addBinding(params.afterimage, 'kickHardMult', { min: 0, max: 0.2, step: 0.005 })
+
+		const rgb = this.pane.addFolder({ title: 'RGB Shift' })
+		rgb.addBinding(params.rgbShift, 'enabled')
+		rgb.addBinding(params.rgbShift, 'kickMult', { min: 0, max: 0.02, step: 0.0005 })
+		rgb.addBinding(params.rgbShift, 'angle', { min: 0, max: Math.PI * 2, step: 0.01 })
+
+		const fish = this.pane.addFolder({ title: 'Fisheye' })
+		fish.addBinding(params.fisheye, 'enabled')
+		fish.addBinding(params.fisheye, 'strengthBase', { min: -0.5, max: 2, step: 0.01 })
+		fish.addBinding(params.fisheye, 'volumeMult', { min: 0, max: 1, step: 0.01 })
+		fish.addBinding(params.fisheye, 'kickMult', { min: 0, max: 1, step: 0.01 })
+		fish.addBinding(params.fisheye, 'kickHardMult', { min: 0, max: 2, step: 0.01 })
+	}
+
+	// Snap to a named preset and sync params + GUI. Used for manual selection.
+	applyColorPreset(idx) {
+		const preset = COLOR_PRESETS[idx]
+		if (!preset) return
+		const { params, sky, clouds } = this.scene
+		sky.lerpColors(preset, preset, 0)
+		clouds.lerpColors(preset, preset, 0)
+		// Sync hex params so the Sky/Clouds color pickers reflect the new state.
+		params.sky.topColor = '#' + preset.skyTop.getHexString()
+		params.sky.bottomColor = '#' + preset.skyBottom.getHexString()
+		params.sky.cloudColor = '#' + preset.skyCloudColor.getHexString()
+		params.clouds.color = '#' + preset.cloudsColor.getHexString()
+		this.syncPresetEditor(idx)
+		this.pane?.refresh()
+	}
+
+	// Mirror the selected preset's THREE.Color values into the editor hex proxy.
+	// Called when the dropdown changes; the GUI then refresh()'s to show new swatches.
+	syncPresetEditor(idx) {
+		const preset = COLOR_PRESETS[idx]
+		if (!preset) return
+		this.presetEditor.skyTop = '#' + preset.skyTop.getHexString()
+		this.presetEditor.skyBottom = '#' + preset.skyBottom.getHexString()
+		this.presetEditor.skyCloudColor = '#' + preset.skyCloudColor.getHexString()
+		this.presetEditor.cloudsColor = '#' + preset.cloudsColor.getHexString()
+	}
+
+	// Persist an editor hex back into the active preset's THREE.Color, then snap
+	// uniforms so the change is visible immediately (overridden next frame if the
+	// autopilot color cycle is running- toggle colorCycle off while editing).
+	editPresetColor(key) {
+		const idx = this.scene.params.autopilot.preset
+		const preset = COLOR_PRESETS[idx]
+		if (!preset) return
+		preset[key].set(this.presetEditor[key])
+		this.applyColorPreset(idx)   // snap + sync both Sky/Clouds pickers and editor
+	}
+
+	refreshBodyMatBindings() {
+		if (!this.bodyMatBindings) return
+		const active = this.scene.params.body.material
+		for (const [key, list] of Object.entries(this.bodyMatBindings)) {
+			for (const binding of list) binding.hidden = key !== active
+		}
+	}
+
+}
