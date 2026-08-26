@@ -62,11 +62,12 @@ export function createDefaultParams() {
 		// floor is the share of base background speed kept when the music is silent.
 		audio: { quiet: 0.25, loud: 0.75, attack: 0.4, release: 2.0, floor: 0.15 },
 		autopilot: { enabled: true, speed: 0.5, colorCycle: true, preset: 0, switchInterval: PRESET_HOLD_SECONDS },
-		// Director: minShot = anti-strobe hold before a kick may cut; max shot
-		// length interpolates calm→intense with the energy; kickCutChance keeps
-		// beat cuts occasional instead of mechanical.
-		// zoomDrift: chance a shot slowly zooms during its run (half in, half out).
-		director: { enabled: true, minShot: 4.0, maxShotCalm: 14, maxShotIntense: 8, cutOnKickHard: true, kickCutChance: 0.5, zoomDrift: 0.7 },
+		// Director (base flow + hard-kick accents): a hard kick punches to an
+		// accent shot when energy >= minEnergy, the cooldown has elapsed and the
+		// accentChance roll passes; the accent holds accentMin..accentMax seconds
+		// then cuts back to the base flow. zoomDrift: chance an accent slowly
+		// zooms during its run (half in, half out).
+		director: { enabled: true, accentChance: 0.6, accentCooldown: 6, accentMin: 2.5, accentMax: 5, minEnergy: 0.45, zoomDrift: 0.7 },
 		body: {
 			material: 'rim',
 			bassScale: 0.55,

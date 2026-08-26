@@ -1,21 +1,21 @@
-// The "réalisation": picks camera shots and HARD-CUTS between them like a
-// music video- on the strong beats (after a minimum hold, so it never
-// strobes) or when the current shot has run its course. Shot choice is
-// energy-weighted: calm passages hold wide/slow frames, intense ones chain
-// punchy close framings. The CameraRig stays the executor- this module only
-// writes its orbit/framing state.
-const SHOTS = [
-	// radius/height: [min, max] picked at cut time. lookY: lookAt height.
+// The "réalisation", structured like a music video: the HOME state is the
+// original floating orbit (slow LFO breathing on radius/height- it can hold
+// for a long time, with an occasional soft reframe), and on hard kicks the
+// camera PUNCHES to an accent shot- held a few seconds, then cut back to the
+// flow. Accents are gated by energy, a cooldown and a chance roll, so strong
+// beats regain a precise visual meaning and special shots stay precious.
+// The CameraRig stays the executor- this module only writes its state.
+const ACCENT_SHOTS = [
+	// radius/height: [min, max] picked at accent time. lookY: lookAt height.
 	// speedMult/bobMult scale the rig's orbit speed and vertical bob.
-	// calm/intense: selection weights blended by energy.
-	{ name: 'wide', radius: [4.5, 6.5], height: [0.6, 1.4], lookY: 0, speedMult: 1.0, bobMult: 1.0, calm: 3, intense: 1 },
+	// calm/intense: rarity weights blended by energy (higher = more frequent).
 	// far: the body becomes a small figure lost in the sky.
 	{ name: 'far', radius: [9, 15], height: [1.0, 3.5], lookY: 0, speedMult: 0.7, bobMult: 1.6, calm: 3, intense: 2 },
-	{ name: 'closeup', radius: [1.7, 2.4], height: [0.2, 0.7], lookY: 0.35, speedMult: 0.6, bobMult: 0.25, calm: 1, intense: 3 },
+	{ name: 'closeup', radius: [1.7, 2.4], height: [0.2, 0.7], lookY: 0.35, speedMult: 0.6, bobMult: 0.25, calm: 2, intense: 3 },
 	{ name: 'lowAngle', radius: [2.5, 3.5], height: [-2.2, -1.2], lookY: 0.2, speedMult: 0.8, bobMult: 0.4, calm: 1, intense: 2 },
 	{ name: 'topDown', radius: [1.2, 2.0], height: [2.6, 3.4], lookY: -0.3, speedMult: 0.9, bobMult: 0.3, calm: 1, intense: 2 },
-	// dolly: radius glides from radius[0] toward radius[1] over the shot.
-	{ name: 'dolly', radius: [6.5, 2.5], height: [0.4, 0.9], lookY: 0.1, speedMult: 0.35, bobMult: 0.5, dolly: true, calm: 3, intense: 1 },
+	// dolly: radius glides from radius[0] toward radius[1] over the accent.
+	{ name: 'dolly', radius: [6.5, 2.5], height: [0.4, 0.9], lookY: 0.1, speedMult: 0.35, bobMult: 0.5, dolly: true, calm: 2, intense: 1 },
 	// Bone-tracked shots (kind handled by the CameraRig):
 	// face- in front of the head, looking at it. below- under the falling
 	// body, silhouette against the sky. hand- close on a hand, the body behind.
@@ -38,44 +38,122 @@ export default class Director {
 	constructor(params, rig) {
 		this.params = params
 		this.rig = rig
-		this.shotTime = 0
+		this.mode = 'base'
+		this.phase = rand(0, 100)   // LFO phase for the base orbit's breathing
 		this.prevKickHard = 0
+		this.cooldown = 0
+		this.accentTime = 0
+		this.accentDur = 0
 		this.dollyTau = 0
-		this.state = { shot: 'wide' }   // GUI monitor binds to this
-		this.cut(0)
+		this.drift = null
+		this.shot = null
+		this.state = { shot: 'base' }   // GUI monitor binds to this
+		this.enterBase(true)
 	}
 
 	update(dt, audio, features) {
 		const p = this.params.director
 		if (!p.enabled) return
-		this.shotTime += dt
+		this.phase += dt
 
-		// Max shot length shrinks as the music intensifies.
-		const maxDur = p.maxShotCalm + (p.maxShotIntense - p.maxShotCalm) * features.energy
-		// Rising edge of the hard kick (it decays from 1 every frame); only a
-		// fraction of them cut, so the montage stays musical without being
-		// mechanical- one cut per beat reads as too much.
+		// Rising edge of the hard kick (it decays from 1 every frame).
 		const kickHit = audio.kickHard > 0.9 && this.prevKickHard <= 0.9
 		this.prevKickHard = audio.kickHard
-		const kickCut = p.cutOnKickHard && kickHit && Math.random() < p.kickCutChance
 
-		if ((kickCut && this.shotTime >= p.minShot) || this.shotTime >= maxDur) this.cut(features.energy)
+		if (this.mode === 'base') {
+			// The home flow: slow LFO breathing on radius/height (different
+			// periods avoid lock-in- the eye reads it as wandering).
+			const r = this.rig.orbit
+			r.radius = 4.8 + Math.sin(this.phase * (Math.PI * 2) / 32) * 1.8
+			r.baseHeight = 0.6 + Math.sin(this.phase * (Math.PI * 2) / 27 + 1.7) * 1.5
 
-		// Dolly shots keep gliding toward their target radius.
+			this.cooldown -= dt
+			this.baseTime += dt
+			if (this.baseTime >= this.baseRecutAt) this.enterBase()   // occasional soft reframe
+
+			const wants = kickHit && this.cooldown <= 0 && features.energy >= p.minEnergy
+			if (wants && Math.random() < p.accentChance) this.enterAccent(features.energy)
+			return
+		}
+
+		// Accent shot running.
+		this.accentTime += dt
 		if (this.shot.dolly) {
 			const r = this.rig.orbit
 			r.radius += (this.shot.radius[1] - r.radius) * (1 - Math.exp(-dt / this.dollyTau))
 		}
-
-		// Random per-shot zoom drift (in / out / none, rolled at cut time).
+		// Random per-accent zoom drift (in / out / hold, rolled at accent time).
 		if (this.drift) {
 			const k = 1 - Math.exp(-dt / this.drift.tau)
 			if (this.rig.trackShot) this.rig.trackShot.dist += (this.drift.target - this.rig.trackShot.dist) * k
 			else this.rig.orbit.radius += (this.drift.target - this.rig.orbit.radius) * k
 		}
+		if (this.accentTime >= this.accentDur) {
+			this.enterBase()
+			this.cooldown = p.accentCooldown
+		}
 	}
 
-	// Roll the zoom drift for the shot that was just cut to: zoom in, zoom out
+	// Cut (back) to the home flow: fresh angle + direction, LFOs take over.
+	enterBase(initial = false) {
+		this.mode = 'base'
+		this.shot = null
+		this.state.shot = 'base'
+		this.rig.trackShot = null
+		this.drift = null
+		this.rig.lookY = 0
+		this.rig.shotSpeedMult = 1
+		this.rig.shotBobMult = 1
+		if (!initial) this.rig.orbit.angle += rand(1.2, 2.5) * (Math.random() < 0.5 ? -1 : 1)
+		this.rig.orbitDir = Math.random() < 0.5 ? -1 : 1
+		this.baseTime = 0
+		this.baseRecutAt = rand(15, 25)
+	}
+
+	// Hard-cut to an accent shot, picked by energy-blended rarity weights.
+	enterAccent(energy) {
+		let total = 0
+		const weights = ACCENT_SHOTS.map((s) => {
+			const w = s.calm + (s.intense - s.calm) * energy
+			total += w
+			return w
+		})
+		let roll = Math.random() * total
+		let next = ACCENT_SHOTS[0]
+		for (let i = 0; i < ACCENT_SHOTS.length; i++) {
+			roll -= weights[i]
+			if (roll <= 0) { next = ACCENT_SHOTS[i]; break }
+		}
+		this.mode = 'accent'
+		this.shot = next
+		this.state.shot = next.name
+		this.accentTime = 0
+		this.accentDur = rand(this.params.director.accentMin, this.params.director.accentMax)
+
+		if (next.track) {
+			this.rig.trackShot = {
+				kind: next.track,
+				dist: rand(next.dist[0], next.dist[1]),
+				side: rand(-1, 1), side2: rand(-1, 1),
+				fresh: true,
+			}
+			this.rollDrift(next)
+			return
+		}
+		this.rig.trackShot = null
+		const r = this.rig.orbit
+		r.angle += rand(1.2, 2.5) * (Math.random() < 0.5 ? -1 : 1)
+		this.rig.orbitDir = Math.random() < 0.5 ? -1 : 1
+		r.radius = next.dolly ? next.radius[0] : rand(next.radius[0], next.radius[1])
+		r.baseHeight = rand(next.height[0], next.height[1])
+		this.rig.lookY = next.lookY
+		this.rig.shotSpeedMult = next.speedMult
+		this.rig.shotBobMult = next.bobMult
+		if (next.dolly) this.dollyTau = rand(2, 4)   // short accent- close the distance fast
+		this.rollDrift(next)
+	}
+
+	// Roll the zoom drift for the accent that was just cut to: zoom in, zoom out
 	// or hold, gliding toward a clamped target so the lens never enters the body.
 	rollDrift(next) {
 		this.drift = null
@@ -91,52 +169,6 @@ export default class Director {
 			const base = this.rig.orbit.radius
 			this.drift = { tau, target: clamp(base * (1 + dir * rand(0.25, 0.55)), ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS) }
 		}
-	}
-
-	cut(energy) {
-		// Energy-blended weighted pick (avoid replaying the same shot).
-		let total = 0
-		const weights = SHOTS.map((s) => {
-			const w = s === this.shot ? 0 : s.calm + (s.intense - s.calm) * energy
-			total += w
-			return w
-		})
-		let roll = Math.random() * total
-		let next = SHOTS[0]
-		for (let i = 0; i < SHOTS.length; i++) {
-			roll -= weights[i]
-			if (roll <= 0) { next = SHOTS[i]; break }
-		}
-		this.shot = next
-		this.state.shot = next.name
-		this.shotTime = 0
-
-		// Bone-tracked shot: the rig ignores the orbit while trackShot is set.
-		// side/side2 give the 'below' shot a random lateral offset per cut.
-		if (next.track) {
-			this.rig.trackShot = {
-				kind: next.track,
-				dist: rand(next.dist[0], next.dist[1]),
-				side: rand(-1, 1), side2: rand(-1, 1),
-				fresh: true,
-			}
-			this.rollDrift(next)
-			return
-		}
-		this.rig.trackShot = null
-
-		// Hard cut: reframe instantly + jump to a fresh viewpoint, and re-roll
-		// the orbit direction so the camera doesn't always circle the same way.
-		const r = this.rig.orbit
-		r.angle += rand(1.2, 2.5) * (Math.random() < 0.5 ? -1 : 1)
-		this.rig.orbitDir = Math.random() < 0.5 ? -1 : 1
-		r.radius = next.dolly ? next.radius[0] : rand(next.radius[0], next.radius[1])
-		r.baseHeight = rand(next.height[0], next.height[1])
-		this.rig.lookY = next.lookY
-		this.rig.shotSpeedMult = next.speedMult
-		this.rig.shotBobMult = next.bobMult
-		if (next.dolly) this.dollyTau = rand(3, 6)   // seconds to close most of the distance
-		this.rollDrift(next)
 	}
 
 }
