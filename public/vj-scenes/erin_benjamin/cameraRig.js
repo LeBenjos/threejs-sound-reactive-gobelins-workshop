@@ -31,6 +31,12 @@ export default class CameraRig {
 		this.camera.lookAt(0, 0, 0)
 	}
 
+	setFov(fov) {
+		if (this.camera.fov === fov) return
+		this.camera.fov = fov
+		this.camera.updateProjectionMatrix()
+	}
+
 	update(dt, audio, features) {
 		const p = this.params.camera
 		// Bone-tracked shots: anchored to the skeleton, following it with a
@@ -40,7 +46,14 @@ export default class CameraRig {
 			this.body.getHeadPosition(this.headPos)
 			this.body.getHeadQuaternion(this.headQuat)
 			this.faceDir.copy(this.faceAxis).applyQuaternion(this.headQuat).normalize()
-			if (t.kind === 'below') {
+			if (t.kind === 'pov') {
+				// Through their eyes: just outside the face, gaze tilted toward the
+				// body center so the flailing arms cross the wide frame's edges.
+				this.desiredPos.copy(this.headPos).addScaledVector(this.faceDir, t.dist)
+				this.upNudge.copy(this.headPos).negate().normalize()   // head → body center
+				this.faceDir.addScaledVector(this.upNudge, 0.5).normalize()
+				this.lookScratch.copy(this.desiredPos).addScaledVector(this.faceDir, 10)
+			} else if (t.kind === 'below') {
 				// Under the falling body, silhouetted against the sky above.
 				this.desiredPos.set(t.side, -t.dist, t.side2)
 				this.lookScratch.copy(this.headPos)

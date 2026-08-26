@@ -16,10 +16,13 @@ const SHOTS = [
 	{ name: 'dolly', radius: [6.5, 2.5], height: [0.4, 0.9], lookY: 0.1, speedMult: 0.35, bobMult: 0.5, dolly: true, calm: 3, intense: 1 },
 	// Bone-tracked shots (kind handled by the CameraRig):
 	// face- in front of the head, looking at it. below- under the falling
-	// body, silhouette against the sky. hand- close on a hand, the body behind.
+	// body, silhouette against the sky. hand- close on a hand, the body
+	// behind. pov- through their eyes, WIDE fov + gaze tilted toward the body
+	// so the flailing arms cross the frame edges and sell the first person.
 	{ name: 'face', track: 'face', dist: [0.9, 1.4], calm: 1, intense: 2 },
-	{ name: 'below', track: 'below', dist: [2.2, 3.2], calm: 2, intense: 2 },
+	{ name: 'below', track: 'below', dist: [2.2, 3.2], fov: 62, calm: 2, intense: 2 },
 	{ name: 'hand', track: 'hand', dist: [0.5, 0.9], calm: 2, intense: 1 },
+	{ name: 'pov', track: 'pov', dist: [0.12, 0.2], fov: 85, calm: 1, intense: 2 },
 ]
 
 const rand = (min, max) => min + Math.random() * (max - min)
@@ -76,6 +79,7 @@ export default class Director {
 		this.shot = next
 		this.state.shot = next.name
 		this.shotTime = 0
+		this.rig.setFov(next.fov ?? 50)   // per-shot lens- wide for pov/below
 
 		// Bone-tracked shot: the rig ignores the orbit while trackShot is set.
 		// side/side2 give the 'below' shot a random lateral offset per cut.
