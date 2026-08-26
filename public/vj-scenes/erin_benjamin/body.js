@@ -9,6 +9,10 @@ import RimShader from './shaders/RimShader.js'
 // the FBX + SkeletonUtils era this replaces).
 const BODY_URL = './assets/character.glb'
 const FADE = 0.35   // crossfade duration between animations (seconds)
+// The backflip clip starts grounded (crouch + push-off) and lasts barely 1s:
+// longer fades in AND out + skipping the first instants + slowed playback, so
+// mid-air it reads as a floating flip- not a jump off an invisible floor.
+const EVENT_TUNING = { backflip: { fade: 0.6, startAt: 0.15, timeScale: 0.7 } }
 
 // The falling character. `falling` loops as the base state; playEvent()
 // crossfades to a rare event clip (backflip one-shot, flying held) and back.
@@ -97,7 +101,7 @@ export default class Body {
 				this.actions.backflip.clampWhenFinished = true
 			}
 			this.mixer.addEventListener('finished', (e) => {
-				if (e.action === this.actions.backflip) this.fadeTo('falling')
+				if (e.action === this.actions.backflip) this.fadeTo('falling', EVENT_TUNING.backflip.fade)
 			})
 			this.actions.falling.play()
 			this.currentAction = this.actions.falling
@@ -109,15 +113,17 @@ export default class Body {
 	// returning. False if the clip is missing or an event is already running.
 	playEvent(name, hold = 0) {
 		if (!this.actions[name] || this.currentAction !== this.actions.falling) return false
-		this.fadeTo(name)
+		const tuning = EVENT_TUNING[name]
+		this.fadeTo(name, tuning?.fade ?? FADE, tuning?.startAt ?? 0, tuning?.timeScale ?? 1)
 		this.eventTimer = hold
 		return true
 	}
 
-	fadeTo(name, duration = FADE) {
+	fadeTo(name, duration = FADE, startAt = 0, timeScale = 1) {
 		const to = this.actions[name]
 		if (!to || this.currentAction === to) return
-		to.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(duration).play()
+		to.reset().setEffectiveTimeScale(timeScale).setEffectiveWeight(1).fadeIn(duration).play()
+		to.time = startAt
 		this.currentAction?.fadeOut(duration)
 		this.currentAction = to
 	}
