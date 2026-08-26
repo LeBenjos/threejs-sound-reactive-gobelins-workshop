@@ -78,12 +78,13 @@ export default class AudioFeatures {
 				// current period (±15%- the signature of MISSED beats on the same
 				// grid, i.e. a breakdown). A gap that fits no multiple is a genuine
 				// tempo change and must pass through raw, or the estimate can never
-				// move. Same idea for double-fires near half the period.
+				// move. No folding on SHORT gaps: the kick detector's refractory
+				// hold already prevents double-fires, and folding there swallowed
+				// genuine tempo doublings.
 				const period = 60 / this.bpm
 				const ratio = gap / period
 				const nearest = Math.round(ratio)
 				if (nearest >= 2 && Math.abs(ratio - nearest) < 0.15 * nearest) gap /= nearest
-				else if (ratio > 0.4 && ratio < 0.6) gap *= 2
 				if (gap >= 0.25 && gap <= 2.0) {   // 30-240 bpm plausibility window
 					this.intervals.push(gap)
 					if (this.intervals.length > 6) this.intervals.shift()
