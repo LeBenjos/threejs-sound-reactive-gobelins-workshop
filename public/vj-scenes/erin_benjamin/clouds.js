@@ -5,6 +5,10 @@ import CloudShader from './shaders/CloudShader.js'
 
 // The 3D parallax cloud field: billboarded FBM sprites distributed over the
 // depth layers of CLOUD_LAYERS, rising with the music and recycling in-band.
+// INSTANCED: the whole field is one draw call- per-sprite variation lives in
+// instanced attributes, palette/churn/opacity in shared uniforms. The only
+// per-frame CPU work is the rise integration and the band-edge fade, written
+// into two attribute arrays.
 export default class Clouds {
 
 	constructor(scene, params) {
@@ -12,15 +16,25 @@ export default class Clouds {
 		this.group = new THREE.Group()
 		// World-space (not pivot) so the pivot's audio-driven scale doesn't pulse them.
 		scene.add(this.group)
-		// Shared geometry- only materials clone per instance (unique seed/color uniforms).
-		this.geometry = new THREE.PlaneGeometry(1, 1)
+		this.material = new THREE.ShaderMaterial({
+			uniforms: THREE.UniformsUtils.clone(CloudShader.uniforms),
+			vertexShader: CloudShader.vertexShader,
+			fragmentShader: CloudShader.fragmentShader,
+			transparent: true,
+			depthWrite: false,
+		})
+		this.material.uniforms.cloudColor.value.set(params.clouds.color)
+		// Neutral shadow fallback- the autopilot color cycle (lerpColors)
+		// replaces it with the palette-derived tint on the first frame.
+		this.material.uniforms.shadowColor.value.set(params.clouds.color).multiplyScalar(0.75)
+		this.baseGeometry = new THREE.PlaneGeometry(1, 1)
 		this.mixScratch = new THREE.Color()      // reused per-frame by lerpColors to avoid GC
 		this.shadowScratch = new THREE.Color()   // same, for the sprites' underside tint
 		this.churn = 0   // internal-billow clock- advances with the energy (see update)
-		this.populate()
+		this.build()
 	}
 
-	populate() {
+	build() {
 		const total = this.params.clouds.count
 		// Distribute total across layers per countShare; round each, push leftover into
 		// last layer so the exact total is respected.
@@ -28,54 +42,62 @@ export default class Clouds {
 		const assigned = perLayer.reduce((s, n) => s + n, 0)
 		perLayer[perLayer.length - 1] += total - assigned
 
+		this.offsets = new Float32Array(total * 3)
+		this.scales = new Float32Array(total * 2)
+		this.sprite = new Float32Array(total * 3)   // seed · noiseRot · shadowMult
+		this.fades = new Float32Array(total)
+		this.layerOf = new Uint8Array(total)
+
+		let i = 0
 		for (let li = 0; li < CLOUD_LAYERS.length; li++) {
-			const layer = CLOUD_LAYERS[li]
-			for (let i = 0; i < perLayer[li]; i++) {
-				const material = new THREE.ShaderMaterial({
-					uniforms: THREE.UniformsUtils.clone(CloudShader.uniforms),
-					vertexShader: CloudShader.vertexShader,
-					fragmentShader: CloudShader.fragmentShader,
-					transparent: true,
-					depthWrite: false,
-				})
-				material.uniforms.seed.value = Math.random()
-				material.uniforms.noiseRot.value = Math.random() * Math.PI * 2
-				material.uniforms.shadowMult.value = 0.8 + Math.random() * 0.4
-				material.uniforms.cloudColor.value.set(this.params.clouds.color)
-				// Neutral shadow fallback- the autopilot color cycle (lerpColors)
-				// replaces it with the palette-derived tint on the first frame.
-				material.uniforms.shadowColor.value.set(this.params.clouds.color).multiplyScalar(0.75)
-				material.uniforms.opacity.value = this.params.clouds.opacity
-				const mesh = new THREE.Mesh(this.geometry, material)
-				const angle = Math.random() * Math.PI * 2
-				const radius = layer.radiusMin + Math.random() * (layer.radiusMax - layer.radiusMin)
-				const y = (Math.random() * 2 - 1) * layer.yRange
-				const scale = layer.scaleMin + Math.random() * (layer.scaleMax - layer.scaleMin)
-				mesh.position.set(Math.cos(angle) * radius, y, Math.sin(angle) * radius)
-				// Real cumulus run wider than tall- the random aspect also breaks
-				// the clone look across the field.
-				mesh.scale.set(scale * (1.1 + Math.random() * 0.6), scale, 1)
-				// Stash layer index- needed at recycle time to respawn in the same band
-				// and at update time to apply per-layer speed multiplier.
-				mesh.userData.layerIndex = li
-				this.group.add(mesh)
+			for (let k = 0; k < perLayer[li]; k++, i++) {
+				this.layerOf[i] = li
+				this.spawn(i, true)
+				this.sprite[i * 3] = Math.random()                     // seed
+				this.sprite[i * 3 + 1] = Math.random() * Math.PI * 2   // noise-domain rotation
+				this.sprite[i * 3 + 2] = 0.8 + Math.random() * 0.4     // shadow depth variation
 			}
 		}
+
+		const geometry = new THREE.InstancedBufferGeometry()
+		geometry.index = this.baseGeometry.index
+		geometry.attributes.position = this.baseGeometry.attributes.position
+		geometry.attributes.uv = this.baseGeometry.attributes.uv
+		geometry.instanceCount = total
+		geometry.setAttribute('aOffset', new THREE.InstancedBufferAttribute(this.offsets, 3))
+		geometry.setAttribute('aScale', new THREE.InstancedBufferAttribute(this.scales, 2))
+		geometry.setAttribute('aSprite', new THREE.InstancedBufferAttribute(this.sprite, 3))
+		geometry.setAttribute('aFade', new THREE.InstancedBufferAttribute(this.fades, 1))
+		this.mesh = new THREE.Mesh(geometry, this.material)
+		this.mesh.frustumCulled = false   // the field surrounds the camera- always on screen
+		this.group.add(this.mesh)
+	}
+
+	// (Re)position sprite i inside its layer band; randomY spreads the initial
+	// population over the whole band instead of stacking everyone at the bottom.
+	spawn(i, randomY = false) {
+		const layer = CLOUD_LAYERS[this.layerOf[i]]
+		const angle = Math.random() * Math.PI * 2
+		const radius = layer.radiusMin + Math.random() * (layer.radiusMax - layer.radiusMin)
+		this.offsets[i * 3] = Math.cos(angle) * radius
+		this.offsets[i * 3 + 1] = randomY ? (Math.random() * 2 - 1) * layer.yRange : -layer.yRange
+		this.offsets[i * 3 + 2] = Math.sin(angle) * radius
+		// Real cumulus run wider than tall- the random aspect also breaks
+		// the clone look across the field.
+		const scale = layer.scaleMin + Math.random() * (layer.scaleMax - layer.scaleMin)
+		this.scales[i * 2] = scale * (1.1 + Math.random() * 0.6)
+		this.scales[i * 2 + 1] = scale
 	}
 
 	rebuild() {
-		// Dispose per-instance materials- shared geometry stays alive.
-		for (const cloud of this.group.children) cloud.material.dispose()
-		this.group.clear()
-		this.populate()
+		this.group.remove(this.mesh)
+		this.mesh.geometry.dispose()   // shared base geometry/material stay alive
+		this.build()
 	}
 
 	setColor(value) {
-		// Per-cloud material clones- propagate to every instance's uniform.
-		for (const cloud of this.group.children) {
-			cloud.material.uniforms.cloudColor.value.set(value)
-			cloud.material.uniforms.shadowColor.value.set(value).multiplyScalar(0.75)
-		}
+		this.material.uniforms.cloudColor.value.set(value)
+		this.material.uniforms.shadowColor.value.set(value).multiplyScalar(0.75)
 	}
 
 	// Lerp the sprite tint between two color presets at factor f (0=A, 1=B).
@@ -83,11 +105,9 @@ export default class Clouds {
 	// rule as the sky shader), so sprites and background share one light.
 	lerpColors(A, B, f) {
 		const mixed = this.mixScratch.copy(A.cloudsColor).lerp(B.cloudsColor, f)
-		const shadow = this.shadowScratch.copy(A.skyTop).lerp(B.skyTop, f).lerp(mixed, 0.55).multiplyScalar(0.8)
-		for (const cloud of this.group.children) {
-			cloud.material.uniforms.cloudColor.value.copy(mixed)
-			cloud.material.uniforms.shadowColor.value.copy(shadow)
-		}
+		this.material.uniforms.cloudColor.value.copy(mixed)
+		this.material.uniforms.shadowColor.value
+			.copy(A.skyTop).lerp(B.skyTop, f).lerp(mixed, 0.55).multiplyScalar(0.8)
 	}
 
 	update(dt, audio, features, camera) {
@@ -112,19 +132,20 @@ export default class Clouds {
 		const baseDy = dt * features.rate * baseRise
 		// Sprites ease back as the energy rises: at full intensity they streak as
 		// translucent accents instead of stacking a second wall over the FBM sky.
-		const spriteOpacity = p.opacity * (1 - 0.25 * features.energy)
+		this.material.uniforms.opacity.value = p.opacity * (1 - 0.25 * features.energy)
 		// Placid billows when calm, boiling on the drops.
 		this.churn += dt * (0.06 + features.energy * 0.3)
-		for (const cloud of this.group.children) {
-			const layer = CLOUD_LAYERS[cloud.userData.layerIndex]
-			cloud.position.y += baseDy * layer.speedMult
-			if (cloud.position.y > layer.yRange) {
-				cloud.position.y = -layer.yRange
-				const angle = Math.random() * Math.PI * 2
-				const radius = layer.radiusMin + Math.random() * (layer.radiusMax - layer.radiusMin)
-				cloud.position.x = Math.cos(angle) * radius
-				cloud.position.z = Math.sin(angle) * radius
+		this.material.uniforms.time.value = this.churn
+
+		const count = this.layerOf.length
+		for (let i = 0; i < count; i++) {
+			const layer = CLOUD_LAYERS[this.layerOf[i]]
+			let y = this.offsets[i * 3 + 1] + baseDy * layer.speedMult
+			if (y > layer.yRange) {
+				this.spawn(i)
+				y = -layer.yRange
 			}
+			this.offsets[i * 3 + 1] = y
 			// Vertical edge envelope: sprites are born transparent at the bottom of
 			// their band and dissolve before the recycle teleport at the top- no
 			// visible spawn/despawn pop whatever the camera angle. Respawn happens
@@ -133,19 +154,12 @@ export default class Clouds {
 			// half a second of travel inside the fade, capped at half the band):
 			// a fixed slice reads as a hard pop when kicks push the rise fast.
 			const fadeDist = Math.min(layer.yRange * 0.5, Math.max(layer.yRange * 0.15, baseRise * layer.speedMult * 0.5))
-			const edgeFade = 1 - THREE.MathUtils.smoothstep(Math.abs(cloud.position.y), layer.yRange - fadeDist, layer.yRange)
-			cloud.material.uniforms.opacity.value = spriteOpacity * edgeFade
-			cloud.material.uniforms.time.value = this.churn
+			this.fades[i] = 1 - THREE.MathUtils.smoothstep(Math.abs(y), layer.yRange - fadeDist, layer.yRange)
 		}
-		this.billboard(camera)
-	}
-
-	// Billboard: each quad faces the camera in yaw AND pitch (lookAt with the
-	// default world-up), so clouds stay visible from the top-down and low-angle
-	// shots too- the previous yaw-only cylinder showed them edge-on from
-	// above/below. World-up roll keeps them from spinning when the camera bobs.
-	billboard(camera) {
-		for (const cloud of this.group.children) cloud.lookAt(camera.position)
+		const attrs = this.mesh.geometry.attributes
+		attrs.aOffset.needsUpdate = true
+		attrs.aScale.needsUpdate = true   // spawn() rewrites scales on recycle
+		attrs.aFade.needsUpdate = true
 	}
 
 }

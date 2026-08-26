@@ -6,17 +6,28 @@ import * as THREE from 'three'
 // invisible in calm passages, a rain of streaks in the drops. Each streak
 // fades softly at both ends and across its width (a light filament, not a
 // hard-edged bar) and STRETCHES with the current speed- motion-blur feel.
-// Per-streak brightness variation comes from the width spread: thinner
-// filaments simply read fainter.
+// INSTANCED: one draw call for the whole field, and the mesh is hidden
+// entirely while the layer is invisible- zero GPU work in calm passages.
 const StreakShader = {
 	uniforms: {
 		globalOpacity: { value: 0 },
+		stretch: { value: 1 },   // speed-driven length multiplier
 	},
 	vertexShader: /* glsl */`
+		attribute vec3 aOffset;
+		attribute vec2 aDim;   // x: width · y: base length
+		uniform float stretch;
 		varying vec2 vUv;
 		void main() {
 			vUv = uv;
-			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+			// World-vertical filament, yaw-billboarded toward the camera.
+			vec3 fwd = cameraPosition - aOffset;
+			vec3 planar = vec3( fwd.z, 0.0, -fwd.x );
+			// Degenerate when the camera sits exactly above the streak- any
+			// horizontal right works there (the filament is a vertical line).
+			vec3 right = length( planar ) < 1e-4 ? vec3( 1.0, 0.0, 0.0 ) : normalize( planar );
+			vec3 world = aOffset + right * position.x * aDim.x + vec3( 0.0, 1.0, 0.0 ) * position.y * aDim.y * stretch;
+			gl_Position = projectionMatrix * viewMatrix * vec4( world, 1.0 );
 		}
 	`,
 	fragmentShader: /* glsl */`
@@ -37,9 +48,7 @@ export default class SpeedLines {
 
 	constructor(scene, params) {
 		this.params = params
-		this.group = new THREE.Group()
-		scene.add(this.group)
-		this.geometry = new THREE.PlaneGeometry(1, 1)
+		this.scene = scene
 		this.material = new THREE.ShaderMaterial({
 			uniforms: THREE.UniformsUtils.clone(StreakShader.uniforms),
 			vertexShader: StreakShader.vertexShader,
@@ -47,58 +56,75 @@ export default class SpeedLines {
 			transparent: true,
 			depthWrite: false,
 		})
-		this.populate()
+		this.baseGeometry = new THREE.PlaneGeometry(1, 1)
+		this.build()
 	}
 
-	populate() {
-		for (let i = 0; i < this.params.lines.count; i++) {
-			const mesh = new THREE.Mesh(this.geometry, this.material)
-			this.respawn(mesh, 0, 0)
-			mesh.position.y = (Math.random() * 2 - 1) * 10
-			this.group.add(mesh)
+	build() {
+		const count = this.params.lines.count
+		this.offsets = new Float32Array(count * 3)
+		this.dims = new Float32Array(count * 2)
+		this.mults = new Float32Array(count)
+		for (let i = 0; i < count; i++) {
+			this.spawn(i, 0, 0)
+			this.offsets[i * 3 + 1] = (Math.random() * 2 - 1) * 10
 		}
+		const geometry = new THREE.InstancedBufferGeometry()
+		geometry.index = this.baseGeometry.index
+		geometry.attributes.position = this.baseGeometry.attributes.position
+		geometry.attributes.uv = this.baseGeometry.attributes.uv
+		geometry.instanceCount = count
+		geometry.setAttribute('aOffset', new THREE.InstancedBufferAttribute(this.offsets, 3))
+		geometry.setAttribute('aDim', new THREE.InstancedBufferAttribute(this.dims, 2))
+		this.mesh = new THREE.Mesh(geometry, this.material)
+		this.mesh.frustumCulled = false
+		this.scene.add(this.mesh)
 	}
 
 	rebuild() {
-		this.group.clear()   // shared geometry/material stay alive
-		this.populate()
+		this.scene.remove(this.mesh)
+		this.mesh.geometry.dispose()   // shared base geometry/material stay alive
+		this.build()
 	}
 
-	respawn(mesh, cx, cz) {
+	spawn(i, cx, cz) {
 		const p = this.params.lines
 		const angle = Math.random() * Math.PI * 2
 		const r = 0.8 + Math.random() * p.radius
-		mesh.position.set(cx + Math.cos(angle) * r, 0, cz + Math.sin(angle) * r)
-		mesh.userData.width = 0.006 + Math.random() * 0.014
-		mesh.userData.baseLen = 1.2 + Math.random() * 2.2
-		mesh.userData.mult = 0.7 + Math.random() * 0.6   // per-streak speed variation
-		return mesh
+		this.offsets[i * 3] = cx + Math.cos(angle) * r
+		this.offsets[i * 3 + 2] = cz + Math.sin(angle) * r
+		this.dims[i * 2] = 0.006 + Math.random() * 0.014
+		this.dims[i * 2 + 1] = 1.2 + Math.random() * 2.2
+		this.mults[i] = 0.7 + Math.random() * 0.6   // per-streak speed variation
 	}
 
 	update(dt, audio, features, camera) {
 		const p = this.params.lines
-		this.group.visible = p.enabled
-		if (!p.enabled) return
 		const e = features.energy
-		// Quadratic gate: the layer only exists when the music pushes.
-		this.material.uniforms.globalOpacity.value = p.opacity * e * e
-		if (this.material.uniforms.globalOpacity.value < 0.01) return
+		// Quadratic gate: the layer only exists when the music pushes- and the
+		// mesh is fully hidden below the threshold, skipping all GPU work.
+		const opacity = p.enabled ? p.opacity * e * e : 0
+		this.mesh.visible = opacity >= 0.01
+		if (!this.mesh.visible) return
+		this.material.uniforms.globalOpacity.value = opacity
 		const speed = (p.speedBase + p.speedEnergyMult * e + features.flow * 8 * e) * features.rate
 		// Faster = longer streaks (motion-blur feel).
-		const stretch = 0.5 + speed * 0.09
+		this.material.uniforms.stretch.value = 0.5 + speed * 0.09
 		const cx = camera.position.x
 		const cy = camera.position.y
 		const cz = camera.position.z
-		for (const mesh of this.group.children) {
-			mesh.position.y += dt * speed * mesh.userData.mult
-			mesh.scale.set(mesh.userData.width, mesh.userData.baseLen * stretch, 1)
-			if (mesh.position.y > cy + 10) {
-				this.respawn(mesh, cx, cz)
-				mesh.position.y = cy - 10 - Math.random() * 4
+		const count = this.mults.length
+		for (let i = 0; i < count; i++) {
+			let y = this.offsets[i * 3 + 1] + dt * speed * this.mults[i]
+			if (y > cy + 10) {
+				this.spawn(i, cx, cz)
+				y = cy - 10 - Math.random() * 4
 			}
-			// cylindrical billboard (same trick as the clouds)
-			mesh.rotation.y = Math.atan2(cx - mesh.position.x, cz - mesh.position.z)
+			this.offsets[i * 3 + 1] = y
 		}
+		const attrs = this.mesh.geometry.attributes
+		attrs.aOffset.needsUpdate = true
+		attrs.aDim.needsUpdate = true
 	}
 
 }

@@ -24,8 +24,11 @@ export default class PostFX {
 
 		// Bloom composer: renders only BLOOM_LAYER (body) into a render target.
 		// Camera layer mask is flipped per-frame in render() so the sky is excluded.
+		// HALF resolution: bloom is a blur by nature- the halved pipeline (scene
+		// pass + UnrealBloom's mip chain) is visually identical for a glow and
+		// costs a quarter of the fragments.
 		this.bloomComposer = new EffectComposer(renderer)
-		this.bloomComposer.setPixelRatio(Math.min(devicePixelRatio, 2))
+		this.bloomComposer.setPixelRatio(Math.min(devicePixelRatio, 2) / 2)
 		this.bloomComposer.setSize(innerWidth, innerHeight)
 		this.bloomComposer.renderToScreen = false
 		this.bloomComposer.addPass(new RenderPass(scene, camera))

@@ -1,37 +1,56 @@
 import * as THREE from 'three'
 
-// Per-cloud billboard quad: soft radial falloff masked by FBM for a puffy,
-// non-uniform alpha. Seed uniform varies the noise per instance.
+// Instanced cloud sprite: ONE draw call for the whole field. Per-sprite
+// variation (seed, noise rotation, shadow depth, edge fade, position, aspect
+// scale) rides instanced attributes; palette colors, churn clock and global
+// opacity are shared uniforms. The vertex builds a point-facing billboard
+// with world-up (same orientation lookAt gave the per-mesh version), and the
+// fragment is the original puffy FBM: domain warp, top-lit modeling in the
+// preset's palette, silver lining, near-lens dissolve.
 export default {
 	uniforms: {
-		seed: { value: 0 },
 		opacity: { value: 0.85 },
 		time: { value: 0 },        // churn clock- integrated in clouds.js, energy-driven
-		noiseRot: { value: 0 },    // per-sprite noise-domain rotation (radians)
-		shadowMult: { value: 1 },  // per-sprite shadow depth variation
 		cloudColor: { value: new THREE.Color(0xffffff) },
 		shadowColor: { value: new THREE.Color(0xbfbfbf) },   // kept in-palette by clouds.js (preset skyTop pull)
 	},
 	vertexShader: /* glsl */`
+		attribute vec3 aOffset;
+		attribute vec2 aScale;
+		attribute vec3 aSprite;   // x: seed · y: noise rotation · z: shadow depth
+		attribute float aFade;    // band-edge envelope, updated per frame
 		varying vec2 vUv;
 		varying vec3 vViewPos;
+		varying vec3 vSprite;
+		varying float vFade;
 		void main() {
 			vUv = uv;
-			vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-			vViewPos = mvPosition.xyz;
-			gl_Position = projectionMatrix * mvPosition;
+			vSprite = aSprite;
+			vFade = aFade;
+			// The group carries the camera's vertical lock- bring the anchor
+			// through the model matrix before billboarding around it.
+			vec3 anchor = ( modelMatrix * vec4( aOffset, 1.0 ) ).xyz;
+			vec3 fwd = normalize( cameraPosition - anchor );
+			// World-up billboard (matches lookAt with default up); fall back to Z
+			// when looking straight down/up, where the cross degenerates.
+			vec3 upRef = abs( fwd.y ) > 0.99 ? vec3( 0.0, 0.0, 1.0 ) : vec3( 0.0, 1.0, 0.0 );
+			vec3 right = normalize( cross( upRef, fwd ) );
+			vec3 up = cross( fwd, right );
+			vec3 world = anchor + right * position.x * aScale.x + up * position.y * aScale.y;
+			vec4 mv = viewMatrix * vec4( world, 1.0 );
+			vViewPos = mv.xyz;
+			gl_Position = projectionMatrix * mv;
 		}
 	`,
 	fragmentShader: /* glsl */`
-		uniform float seed;
 		uniform float opacity;
 		uniform float time;
-		uniform float noiseRot;
-		uniform float shadowMult;
 		uniform vec3 cloudColor;
 		uniform vec3 shadowColor;
 		varying vec2 vUv;
 		varying vec3 vViewPos;
+		varying vec3 vSprite;
+		varying float vFade;
 
 		float hash( vec2 p ) {
 			return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 );
@@ -58,6 +77,9 @@ export default {
 		}
 
 		void main() {
+			float seed = vSprite.x;
+			float noiseRot = vSprite.y;
+			float shadowMult = vSprite.z;
 			vec2 p = vUv - 0.5;
 			vec2 seedOff = vec2( seed * 7.3, seed * 2.1 );
 			// Per-sprite rotation of the noise domain- breaks the clone look
@@ -94,7 +116,7 @@ export default {
 			// instant the billboard flips past the camera. Dissolve them over the
 			// last 2 world units instead- fully gone before the near plane.
 			float nearFade = smoothstep( 0.7, 2.0, length( vViewPos ) );
-			float alpha = body * puff * opacity * nearFade;
+			float alpha = body * puff * opacity * vFade * nearFade;
 			if ( alpha < 0.01 ) discard;   // avoid sorting artifacts on near-empty pixels
 			gl_FragColor = vec4( col, alpha );
 		}
