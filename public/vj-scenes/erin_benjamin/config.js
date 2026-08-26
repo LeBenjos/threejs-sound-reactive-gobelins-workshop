@@ -80,13 +80,16 @@ export function createDefaultParams() {
 		body: {
 			material: 'rim',
 			bassScale: 0.55,
+			drift: 0.35,   // lateral wind-drift amplitude of the whole body
 			rim: { baseColor: '#d5d5dd', power: 3.0, strength: 1.4, kickHardMult: 1.5, shading: 0.45, ambient: 0.65 },
 			normal: { wireframe: false, flatShading: false },
 			basic: { color: '#ffffff', wireframe: false },
 			wireframe: { color: '#ffffff' },
 			depth: { wireframe: false },
 		},
-		camera: { baseSpeed: 0.2, kickMult: 2.0, verticalSpeed: 0.26, verticalAmp: 0.85, verticalEnergyMult: 0.5 },
+		// shake: wind turbulence amplitude (energy²-gated); rollAmp/rollSpeed:
+		// slow horizon roll- freefall has no up.
+		camera: { baseSpeed: 0.2, kickMult: 2.0, verticalSpeed: 0.26, verticalAmp: 0.85, verticalEnergyMult: 0.5, shake: 0.05, rollAmp: 0.12, rollSpeed: 0.06 },
 		sky: {
 			enabled: true,
 			scrollSpeedBase: 0.36,
@@ -108,6 +111,8 @@ export function createDefaultParams() {
 			opacity: 0.85,
 			color: '#ffffff',
 		},
+		// Freefall speed streaks near the camera- opacity gated by energy².
+		lines: { enabled: true, count: 70, opacity: 0.4, speedBase: 5, speedEnergyMult: 16, radius: 6 },
 		// threshold must stay ABOVE the white body's max luminance (~0.70 with the
 		// #d5d5dd base): only the rim-boosted edges cross it, so the bloom halos
 		// the contour instead of flaring the whole body.

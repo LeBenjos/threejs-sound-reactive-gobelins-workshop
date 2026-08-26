@@ -11,6 +11,7 @@ import MusicEvents from './events.js'
 import Gui from './gui.js'
 import PostFX from './postfx.js'
 import Sky from './sky.js'
+import SpeedLines from './speedLines.js'
 
 // Orchestrator: owns the renderer + the shared params tree, wires the modules
 // together and drives the Analyzer lifecycle (load → init/warmup → play/stop).
@@ -48,6 +49,7 @@ export default class ErinBenjaminScene {
 		this.cameraRig = new CameraRig(this.params)
 		this.sky = new Sky(this.scene, this.params)
 		this.clouds = new Clouds(this.scene, this.params)
+		this.speedLines = new SpeedLines(this.scene, this.params)
 
 		this.pivot = new THREE.Group()
 		this.scene.add(this.pivot)
@@ -88,13 +90,18 @@ export default class ErinBenjaminScene {
 		// Autopilot next- mutates params so the audio-reactive logic below adds on top.
 		if (this.params.autopilot.enabled) this.autopilot.update(dt)
 
-		// The body breathes with the bass.
+		// The body breathes with the bass, and slowly drifts on air currents
+		// (two incommensurate periods- reads as wandering, not oscillating).
 		this.pivot.scale.setScalar(1 + this.features.bass * this.params.body.bassScale)
+		this.driftPhase = (this.driftPhase ?? 0) + dt
+		const drift = this.params.body.drift
+		this.pivot.position.set(Math.sin(this.driftPhase * 0.31) * drift, 0, Math.sin(this.driftPhase * 0.23 + 1.3) * drift)
 		this.events.update(dt, a, this.features)
 		this.director.update(dt, a, this.features)
 		this.cameraRig.update(dt, a, this.features)
 		this.sky.update(dt, a, this.features, this.cameraRig.camera)
 		this.clouds.update(dt, a, this.features, this.cameraRig.camera)
+		this.speedLines.update(dt, a, this.features, this.cameraRig.camera)
 		this.postfx.update(a, this.features)
 		this.postfx.render(dt)
 	}

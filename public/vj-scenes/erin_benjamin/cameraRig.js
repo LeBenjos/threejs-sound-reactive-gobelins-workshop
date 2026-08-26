@@ -31,6 +31,23 @@ export default class CameraRig {
 		this.camera.lookAt(0, 0, 0)
 	}
 
+	// Freefall "feel" applied to every shot after framing: a slow horizon roll
+	// (no up in freefall- gentle disorientation) and a high-frequency wind
+	// turbulence gated by energy SQUARED, so calm passages stay rock steady.
+	applyFeel(dt, features) {
+		const p = this.params.camera
+		this.feelTime = (this.feelTime ?? 0) + dt
+		const t = this.feelTime
+		const roll = Math.sin(t * p.rollSpeed * Math.PI * 2) * p.rollAmp * (0.4 + 0.6 * features.energy)
+		this.camera.rotateZ(roll)
+		const amp = p.shake * features.energy * features.energy
+		if (amp > 0.0001) {
+			this.camera.position.x += (Math.sin(t * 39.7) + Math.sin(t * 23.3) * 0.6) * amp * 0.5
+			this.camera.position.y += (Math.sin(t * 31.9 + 1.7) + Math.sin(t * 17.3) * 0.6) * amp * 0.5
+			this.camera.position.z += Math.sin(t * 27.1 + 3.1) * amp * 0.4
+		}
+	}
+
 	update(dt, audio, features) {
 		const p = this.params.camera
 		// Bone-tracked shots: anchored to the skeleton, following it with a
@@ -58,6 +75,7 @@ export default class CameraRig {
 			if (t.fresh) { this.camera.position.copy(this.desiredPos); t.fresh = false }
 			else this.camera.position.lerp(this.desiredPos, 1 - Math.exp(-dt / 0.15))
 			this.camera.lookAt(this.lookScratch)
+			this.applyFeel(dt, features)
 			return
 		}
 		// Integrating into angular *velocity* (not angle directly) keeps motion
@@ -72,6 +90,7 @@ export default class CameraRig {
 		const bob = (Math.sin(verticalPhase) * p.verticalAmp + features.energy * p.verticalEnergyMult) * this.shotBobMult
 		this.camera.position.set(Math.sin(angle) * radius, baseHeight + bob, Math.cos(angle) * radius)
 		this.camera.lookAt(0, this.lookY, 0)
+		this.applyFeel(dt, features)
 	}
 
 	resize() {

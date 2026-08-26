@@ -80,6 +80,7 @@ export default class Gui {
 
 		const bodyFolder = this.pane.addFolder({ title: 'Body', expanded: false })
 		bodyFolder.addBinding(params.body, 'bassScale', { min: 0, max: 2, step: 0.05 })
+		bodyFolder.addBinding(params.body, 'drift', { min: 0, max: 1.2, step: 0.05 })
 		bodyFolder.addBinding(params.body, 'material', {
 			options: { rim: 'rim', normal: 'normal', basic: 'basic', wireframe: 'wireframe', depth: 'depth' },
 		}).on('change', (ev) => {
@@ -158,6 +159,19 @@ export default class Gui {
 		cam.addBinding(params.camera, 'verticalEnergyMult', { min: 0, max: 4, step: 0.05 })
 		cam.addBinding(cameraRig.orbit, 'radius', { min: 1, max: 10, step: 0.1 })
 		cam.addBinding(cameraRig.orbit, 'baseHeight', { min: -6, max: 8, step: 0.05 })
+		cam.addBinding(params.camera, 'shake', { min: 0, max: 0.2, step: 0.005 })
+		cam.addBinding(params.camera, 'rollAmp', { min: 0, max: 0.35, step: 0.01 })
+		cam.addBinding(params.camera, 'rollSpeed', { min: 0, max: 0.3, step: 0.005 })
+
+		const lines = this.pane.addFolder({ title: 'Speed lines', expanded: false })
+		lines.addBinding(params.lines, 'enabled')
+		lines.addBinding(params.lines, 'count', { min: 0, max: 200, step: 1 }).on('change', (ev) => {
+			if (ev.last) this.scene.speedLines.rebuild()
+		})
+		lines.addBinding(params.lines, 'opacity', { min: 0, max: 1, step: 0.01 })
+		lines.addBinding(params.lines, 'speedBase', { min: 0, max: 20, step: 0.5 })
+		lines.addBinding(params.lines, 'speedEnergyMult', { min: 0, max: 40, step: 0.5 })
+		lines.addBinding(params.lines, 'radius', { min: 1, max: 15, step: 0.5 })
 
 		const skyFolder = this.pane.addFolder({ title: 'Sky', expanded: false })
 		skyFolder.addBinding(params.sky, 'enabled')
