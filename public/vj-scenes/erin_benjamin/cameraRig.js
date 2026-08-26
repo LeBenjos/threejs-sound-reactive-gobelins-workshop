@@ -51,7 +51,7 @@ export default class CameraRig {
 				// body center so the flailing arms cross the wide frame's edges.
 				this.desiredPos.copy(this.headPos).addScaledVector(this.faceDir, t.dist)
 				this.upNudge.copy(this.headPos).negate().normalize()   // head → body center
-				this.faceDir.addScaledVector(this.upNudge, 0.5).normalize()
+				this.faceDir.addScaledVector(this.upNudge, 1.2).normalize()
 				this.lookScratch.copy(this.desiredPos).addScaledVector(this.faceDir, 10)
 			} else if (t.kind === 'below') {
 				// Under the falling body, silhouetted against the sky above.

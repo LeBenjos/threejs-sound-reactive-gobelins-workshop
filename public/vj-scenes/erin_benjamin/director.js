@@ -22,7 +22,7 @@ const SHOTS = [
 	{ name: 'face', track: 'face', dist: [0.9, 1.4], calm: 1, intense: 2 },
 	{ name: 'below', track: 'below', dist: [2.2, 3.2], fov: 62, calm: 2, intense: 2 },
 	{ name: 'hand', track: 'hand', dist: [0.5, 0.9], calm: 2, intense: 1 },
-	{ name: 'pov', track: 'pov', dist: [0.12, 0.2], fov: 85, calm: 1, intense: 2 },
+	{ name: 'pov', track: 'pov', dist: [0.12, 0.2], fov: 92, calm: 1, intense: 2 },
 ]
 
 const rand = (min, max) => min + Math.random() * (max - min)
