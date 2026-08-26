@@ -2,7 +2,8 @@ import * as THREE from 'three'
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
-import { BLOOM_LAYER, TARGET_HEIGHT } from './config.js'
+import { BLOOM_LAYER, COLOR_PRESETS, TARGET_HEIGHT } from './config.js'
+import RimShader from './shaders/RimShader.js'
 
 const BODY_URL = './assets/body.glb'
 const FALLING_URL = './assets/falling.fbx'
@@ -67,8 +68,23 @@ export default class Body {
 		}
 	}
 
-	update(dt) {
+	update(dt, audio, features) {
 		if (this.mixer) this.mixer.update(dt)
+		// Rim material: the contour glow pulses on the strong beats (energy-gated,
+		// like the other flash effects).
+		const u = this.mat?.uniforms
+		if (u?.rimStrength) {
+			const r = this.params.body.rim
+			u.rimStrength.value = r.strength + audio.kickHard * r.kickHardMult * features.energy
+			u.rimPower.value = r.power
+		}
+	}
+
+	// Lerp the rim color between two presets at factor f (0=A, 1=B). No-op for
+	// the non-rim materials.
+	lerpColors(A, B, f) {
+		const u = this.mat?.uniforms
+		if (u?.rimColor) u.rimColor.value.copy(A.bodyRim).lerp(B.bodyRim, f)
 	}
 
 	normalize() {
@@ -137,6 +153,19 @@ export default class Body {
 	createMaterial(type) {
 		const b = this.params.body
 		switch (type) {
+			case 'rim': {
+				const mat = new THREE.ShaderMaterial({
+					uniforms: THREE.UniformsUtils.clone(RimShader.uniforms),
+					vertexShader: RimShader.vertexShader,
+					fragmentShader: RimShader.fragmentShader,
+				})
+				mat.uniforms.baseColor.value.set(b.rim.baseColor)
+				// Start from the active preset's rim color- the autopilot color cycle
+				// keeps it in sync afterwards.
+				const preset = COLOR_PRESETS[this.params.autopilot.preset]
+				if (preset) mat.uniforms.rimColor.value.copy(preset.bodyRim)
+				return mat
+			}
 			case 'normal': return new THREE.MeshNormalMaterial({ wireframe: b.normal.wireframe, flatShading: b.normal.flatShading })
 			case 'basic': return new THREE.MeshBasicMaterial({ color: b.basic.color, wireframe: b.basic.wireframe })
 			case 'wireframe': return new THREE.MeshBasicMaterial({ color: b.wireframe.color, wireframe: true })

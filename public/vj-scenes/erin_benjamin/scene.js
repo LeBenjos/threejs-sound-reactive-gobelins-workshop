@@ -52,7 +52,7 @@ export default class ErinBenjaminScene {
 		this.body.init(this.pivot)
 
 		this.postfx = new PostFX(this.renderer, this.scene, this.cameraRig.camera, this.params)
-		this.autopilot = new Autopilot(this.params, this.cameraRig.orbit, this.sky, this.clouds)
+		this.autopilot = new Autopilot(this.params, this.cameraRig.orbit, this.sky, this.clouds, this.body)
 		this.gui = new Gui(this)
 		this.autopilot.onPresetAdvanced = (idx) => this.gui.onPresetAdvanced(idx)
 
@@ -78,7 +78,7 @@ export default class ErinBenjaminScene {
 
 		// Derived signals first- everything below reads them.
 		this.features.update(dt, a)
-		this.body.update(dt)
+		this.body.update(dt, a, this.features)
 
 		// Autopilot next- mutates params so the audio-reactive logic below adds on top.
 		if (this.params.autopilot.enabled) this.autopilot.update(dt)

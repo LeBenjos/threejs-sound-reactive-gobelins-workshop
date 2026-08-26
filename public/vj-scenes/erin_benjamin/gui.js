@@ -19,6 +19,7 @@ export default class Gui {
 			skyBottom: '#' + COLOR_PRESETS[0].skyBottom.getHexString(),
 			skyCloudColor: '#' + COLOR_PRESETS[0].skyCloudColor.getHexString(),
 			cloudsColor: '#' + COLOR_PRESETS[0].cloudsColor.getHexString(),
+			bodyRim: '#' + COLOR_PRESETS[0].bodyRim.getHexString(),
 		}
 		if (scene.audio?.mode !== 'live') return
 		this.build()
@@ -70,11 +71,12 @@ export default class Gui {
 		edit.addBinding(this.presetEditor, 'skyBottom', { view: 'color' }).on('change', () => this.editPresetColor('skyBottom'))
 		edit.addBinding(this.presetEditor, 'skyCloudColor', { view: 'color' }).on('change', () => this.editPresetColor('skyCloudColor'))
 		edit.addBinding(this.presetEditor, 'cloudsColor', { view: 'color' }).on('change', () => this.editPresetColor('cloudsColor'))
+		edit.addBinding(this.presetEditor, 'bodyRim', { view: 'color' }).on('change', () => this.editPresetColor('bodyRim'))
 
 		const bodyFolder = this.pane.addFolder({ title: 'Body' })
 		bodyFolder.addBinding(params.body, 'bassScale', { min: 0, max: 2, step: 0.05 })
 		bodyFolder.addBinding(params.body, 'material', {
-			options: { normal: 'normal', basic: 'basic', wireframe: 'wireframe', depth: 'depth' },
+			options: { rim: 'rim', normal: 'normal', basic: 'basic', wireframe: 'wireframe', depth: 'depth' },
 		}).on('change', (ev) => {
 			body.setMaterial(ev.value)
 			this.refreshBodyMatBindings()
@@ -97,6 +99,15 @@ export default class Gui {
 
 		const b = params.body
 		this.bodyMatBindings = {
+			rim: [
+				bodyFolder.addBinding(b.rim, 'baseColor', { view: 'color' }).on('change', (ev) => {
+					if (body.mat?.uniforms?.baseColor) body.mat.uniforms.baseColor.value.set(ev.value)
+				}),
+				// power/strength/kickHardMult are read every frame by body.update()
+				bodyFolder.addBinding(b.rim, 'power', { min: 0.5, max: 8, step: 0.1 }),
+				bodyFolder.addBinding(b.rim, 'strength', { min: 0, max: 4, step: 0.05 }),
+				bodyFolder.addBinding(b.rim, 'kickHardMult', { min: 0, max: 4, step: 0.05 }),
+			],
 			normal: [
 				bodyFolder.addBinding(b.normal, 'wireframe').on('change', onProp('wireframe', b.normal)),
 				bodyFolder.addBinding(b.normal, 'flatShading').on('change', onFlat(b.normal)),
@@ -183,9 +194,10 @@ export default class Gui {
 	applyColorPreset(idx) {
 		const preset = COLOR_PRESETS[idx]
 		if (!preset) return
-		const { params, sky, clouds } = this.scene
+		const { params, sky, clouds, body } = this.scene
 		sky.lerpColors(preset, preset, 0)
 		clouds.lerpColors(preset, preset, 0)
+		body.lerpColors(preset, preset, 0)
 		// Sync hex params so the Sky/Clouds color pickers reflect the new state.
 		params.sky.topColor = '#' + preset.skyTop.getHexString()
 		params.sky.bottomColor = '#' + preset.skyBottom.getHexString()
@@ -204,6 +216,7 @@ export default class Gui {
 		this.presetEditor.skyBottom = '#' + preset.skyBottom.getHexString()
 		this.presetEditor.skyCloudColor = '#' + preset.skyCloudColor.getHexString()
 		this.presetEditor.cloudsColor = '#' + preset.cloudsColor.getHexString()
+		this.presetEditor.bodyRim = '#' + preset.bodyRim.getHexString()
 	}
 
 	// Persist an editor hex back into the active preset's THREE.Color, then snap

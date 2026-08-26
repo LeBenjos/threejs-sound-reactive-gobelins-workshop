@@ -6,11 +6,12 @@ import { COLOR_PRESETS } from './config.js'
 // Disabling autopilot lets the manual GUI values take over again instantly.
 export default class Autopilot {
 
-	constructor(params, orbit, sky, clouds) {
+	constructor(params, orbit, sky, clouds, body) {
 		this.params = params
 		this.orbit = orbit
 		this.sky = sky
 		this.clouds = clouds
+		this.body = body
 		this.phase = 0
 		this.presetTimer = 0   // seconds spent on current preset (color cycle)
 		this.onPresetAdvanced = null   // wired by the scene- lets the GUI mirror the cycle
@@ -69,6 +70,7 @@ export default class Autopilot {
 		const smooth = f * f * (3 - 2 * f)   // ease so each preset feels held, not constantly drifting
 		this.sky.lerpColors(COLOR_PRESETS[cur], COLOR_PRESETS[nxt], smooth)
 		this.clouds.lerpColors(COLOR_PRESETS[cur], COLOR_PRESETS[nxt], smooth)
+		this.body.lerpColors(COLOR_PRESETS[cur], COLOR_PRESETS[nxt], smooth)
 	}
 
 }

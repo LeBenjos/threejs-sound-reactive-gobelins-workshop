@@ -23,27 +23,32 @@ export const CLOUD_LAYERS = [
 // Sky + cloud color palettes. Autopilot cycles between them (smooth lerp) when
 // colorCycle is on; the GUI dropdown picks one manually when it's off.
 // Each preset defines: sky top/bottom gradient, sky's internal FBM cloud tint,
-// and the 3D cloud sprite tint.
+// the 3D cloud sprite tint, and the body's rim color- picked to CONTRAST with
+// that preset's sky so the silhouette always separates from the background.
 export const COLOR_PRESETS = [
 	{
 		name: 'Daylight',
 		skyTop: new THREE.Color(0x6fb4ff), skyBottom: new THREE.Color(0xbfe1ff),
 		skyCloudColor: new THREE.Color(0xffffff), cloudsColor: new THREE.Color(0xffffff),
+		bodyRim: new THREE.Color(0xff6a00),
 	},
 	{
 		name: 'Sunset',
 		skyTop: new THREE.Color(0xeca36a), skyBottom: new THREE.Color(0xd895c6),
 		skyCloudColor: new THREE.Color(0xf4aea6), cloudsColor: new THREE.Color(0xeba599),
+		bodyRim: new THREE.Color(0x00e5ff),
 	},
 	{
 		name: 'Twilight',
 		skyTop: new THREE.Color(0x383679), skyBottom: new THREE.Color(0x6c558d),
 		skyCloudColor: new THREE.Color(0x78528c), cloudsColor: new THREE.Color(0x58407b),
+		bodyRim: new THREE.Color(0xffd166),
 	},
 	{
 		name: 'Aurora',
 		skyTop: new THREE.Color(0x041a36), skyBottom: new THREE.Color(0x118a72),
 		skyCloudColor: new THREE.Color(0x9affe6), cloudsColor: new THREE.Color(0x55ffd0),
+		bodyRim: new THREE.Color(0xff4fd8),
 	},
 ]
 
@@ -58,8 +63,9 @@ export function createDefaultParams() {
 		audio: { quiet: 0.25, loud: 0.75, attack: 0.4, release: 2.0, floor: 0.15 },
 		autopilot: { enabled: true, speed: 0.5, colorCycle: true, preset: 0, switchInterval: PRESET_HOLD_SECONDS },
 		body: {
-			material: 'normal',
+			material: 'rim',
 			bassScale: 0.55,
+			rim: { baseColor: '#0b0b14', power: 2.5, strength: 1.2, kickHardMult: 1.5 },
 			normal: { wireframe: false, flatShading: false },
 			basic: { color: '#ffffff', wireframe: false },
 			wireframe: { color: '#ffffff' },
