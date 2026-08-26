@@ -73,7 +73,14 @@ export default class AudioFeatures {
 		this.prevKick = audio.kick
 		if (kickHit) {
 			if (this.lastKickAt !== null) {
-				const gap = this.time - this.lastKickAt
+				let gap = this.time - this.lastKickAt
+				// Octave folding against the current tempo: a gap ~2x/4x the beat
+				// period is a MISSED beat (breakdowns thin the kicks out, the tempo
+				// itself doesn't halve)- fold it back onto the grid. Same for
+				// double-fires at ~half the period.
+				const period = 60 / this.bpm
+				for (let i = 0; i < 3 && gap > period * 1.55; i++) gap /= 2
+				for (let i = 0; i < 2 && gap < period * 0.55; i++) gap *= 2
 				if (gap >= 0.25 && gap <= 2.0) {   // 30-240 bpm plausibility window
 					this.intervals.push(gap)
 					if (this.intervals.length > 6) this.intervals.shift()
