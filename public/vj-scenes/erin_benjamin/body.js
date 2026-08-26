@@ -12,7 +12,11 @@ const FADE = 0.35   // crossfade duration between animations (seconds)
 // The backflip clip starts grounded (crouch + push-off) and lasts barely 1s:
 // longer fades in AND out + skipping the first instants + slowed playback, so
 // mid-air it reads as a floating flip- not a jump off an invisible floor.
-const EVENT_TUNING = { backflip: { fade: 0.6, startAt: 0.15, timeScale: 0.7 } }
+// limbMix blends the falling clip's LIMB tracks over the flip (weight ratio
+// limbMix/(1+limbMix)): the body still fully rotates, but arms and legs keep
+// flailing- an involuntary tumble instead of a deliberate gymnast tuck.
+const EVENT_TUNING = { backflip: { fade: 0.6, startAt: 0.15, timeScale: 0.7, limbMix: 1.2 } }
+const LIMB_RE = /Arm|Hand|Shoulder|Leg|Foot|Toe/i   // everything but Hips/Spine/Neck/Head
 
 // The falling character. `falling` loops as the base state; playEvent()
 // crossfades to a rare event clip (backflip one-shot, flying held) and back.
@@ -94,6 +98,13 @@ export default class Body {
 			for (const [name, clip] of Object.entries(this.clips)) {
 				this.actions[name] = this.mixer.clipAction(clip)
 			}
+			// Derived clip: the falling's limb tracks alone- layered over the
+			// backflip so the tumble keeps the helpless flailing (see EVENT_TUNING).
+			const limbTracks = this.clips.falling.tracks.filter((t) => LIMB_RE.test(t.name))
+			if (limbTracks.length) {
+				this.actions.fallingLimbs = this.mixer.clipAction(
+					new THREE.AnimationClip('fallingLimbs', this.clips.falling.duration, limbTracks))
+			}
 			// backflip is a one-shot: clamp on the last frame while fading back
 			// (the 'finished' listener below triggers the return to falling).
 			if (this.actions.backflip) {
@@ -101,7 +112,10 @@ export default class Body {
 				this.actions.backflip.clampWhenFinished = true
 			}
 			this.mixer.addEventListener('finished', (e) => {
-				if (e.action === this.actions.backflip) this.fadeTo('falling', EVENT_TUNING.backflip.fade)
+				if (e.action === this.actions.backflip) {
+					this.fadeTo('falling', EVENT_TUNING.backflip.fade)
+					this.actions.fallingLimbs?.fadeOut(EVENT_TUNING.backflip.fade)
+				}
 			})
 			this.actions.falling.play()
 			this.currentAction = this.actions.falling
@@ -114,7 +128,15 @@ export default class Body {
 	playEvent(name, hold = 0) {
 		if (!this.actions[name] || this.currentAction !== this.actions.falling) return false
 		const tuning = EVENT_TUNING[name]
+		const fallingTime = this.actions.falling.time   // for limb-layer continuity
 		this.fadeTo(name, tuning?.fade ?? FADE, tuning?.startAt ?? 0, tuning?.timeScale ?? 1)
+		// Layer the flailing limbs over the flip, in phase with where the
+		// falling loop just was so the limbs don't pop at the blend start.
+		const aux = this.actions.fallingLimbs
+		if (tuning?.limbMix && aux) {
+			aux.reset().setEffectiveTimeScale(1).setEffectiveWeight(tuning.limbMix).fadeIn(tuning.fade).play()
+			aux.time = fallingTime
+		}
 		this.eventTimer = hold
 		return true
 	}
