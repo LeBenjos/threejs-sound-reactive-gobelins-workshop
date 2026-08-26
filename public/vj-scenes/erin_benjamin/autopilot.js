@@ -33,6 +33,7 @@ export default class Autopilot {
 		const p = this.params.autopilot
 		p.preset = (p.preset + 1) % COLOR_PRESETS.length
 		this.presetTimer = 0
+		this.surge = 1   // a pending surge must not keep racing the cycle after the snap
 		this.onPresetAdvanced?.(p.preset)
 	}
 
