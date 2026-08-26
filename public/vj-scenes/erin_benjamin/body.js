@@ -181,7 +181,10 @@ export default class Body {
 	}
 
 	update(dt, audio, features, camera) {
-		if (this.mixer) this.mixer.update(dt)
+		if (this.mixer) {
+			this.mixer.timeScale = features.rate   // the fall itself follows the track's tempo
+			this.mixer.update(dt)
+		}
 		// Held event (flying) running out → glide back to the base fall.
 		if (this.eventTimer > 0) {
 			this.eventTimer -= dt

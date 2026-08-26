@@ -83,7 +83,7 @@ export default class SpeedLines {
 		// Quadratic gate: the layer only exists when the music pushes.
 		this.material.uniforms.globalOpacity.value = p.opacity * e * e
 		if (this.material.uniforms.globalOpacity.value < 0.01) return
-		const speed = p.speedBase + p.speedEnergyMult * e + features.flow * 8 * e
+		const speed = (p.speedBase + p.speedEnergyMult * e + features.flow * 8 * e) * features.rate
 		// Faster = longer streaks (motion-blur feel).
 		const stretch = 0.5 + speed * 0.09
 		const cx = camera.position.x

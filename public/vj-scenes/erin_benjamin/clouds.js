@@ -109,7 +109,7 @@ export default class Clouds {
 		const floor = this.params.audio.floor
 		const base = p.riseSpeedBase * (floor + (1 - floor) * features.energy)
 		const baseRise = base + features.energy * p.riseEnergyMult + features.flow * p.riseKickMult * features.energy
-		const baseDy = dt * baseRise
+		const baseDy = dt * features.rate * baseRise
 		// Sprites ease back as the energy rises: at full intensity they streak as
 		// translucent accents instead of stacking a second wall over the FBM sky.
 		const spriteOpacity = p.opacity * (1 - 0.25 * features.energy)

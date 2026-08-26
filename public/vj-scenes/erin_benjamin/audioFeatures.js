@@ -17,7 +17,14 @@ export default class AudioFeatures {
 		this.high = 0     // ~5-17 kHz      hats/cymbals → RGB shift
 		this.energy = 0   // passage intensity → global reactivity gate
 		this.flow = 0     // smoothed kick- a bell-shaped swell per beat, for VELOCITIES
+		this.bpm = 100    // live tempo estimate from kick intervals
+		this.pace = 0.5   // bpm normalized between bpmSlow..bpmFast, eased
+		this.rate = 1     // global world-speed multiplier derived from pace
 		this.peaks = { bass: 0.05, mid: 0.05, high: 0.05, energy: 0.05 }
+		this.time = 0
+		this.prevKick = 0
+		this.lastKickAt = null
+		this.intervals = []
 	}
 
 	// Normalize a raw band level by its slow-decaying peak (instant attack,
@@ -48,6 +55,30 @@ export default class AudioFeatures {
 		// cloud rise): the raw kick is a step- stepping a velocity reads as a
 		// stutter- while this swells and settles. Raw kick stays for flashes.
 		this.flow = follow(this.flow, audio.kick, dt, 0.09, 0.35)
+
+		// Live BPM from the soft-kick intervals (median of the last 6, outliers
+		// rejected), then a normalized pace and a WORLD-SPEED multiplier: the
+		// whole scene- animation, sky, clouds, streaks, orbit- accelerates and
+		// settles with the track's tempo.
+		this.time += dt
+		const kickHit = audio.kick > 0.9 && this.prevKick <= 0.9
+		this.prevKick = audio.kick
+		if (kickHit) {
+			if (this.lastKickAt !== null) {
+				const gap = this.time - this.lastKickAt
+				if (gap >= 0.25 && gap <= 2.0) {   // 30-240 bpm plausibility window
+					this.intervals.push(gap)
+					if (this.intervals.length > 6) this.intervals.shift()
+					const sorted = [...this.intervals].sort((a, b) => a - b)
+					this.bpmTarget = 60 / sorted[Math.floor(sorted.length / 2)]
+				}
+			}
+			this.lastKickAt = this.time
+		}
+		this.bpm = follow(this.bpm, this.bpmTarget ?? this.bpm, dt, 1.5, 1.5)
+		const pt = Math.min(1, Math.max(0, (this.bpm - p.bpmSlow) / Math.max(1, p.bpmFast - p.bpmSlow)))
+		this.pace = follow(this.pace, pt, dt, 1.0, 1.5)
+		this.rate = p.rateMin + (p.rateMax - p.rateMin) * this.pace
 	}
 
 }
