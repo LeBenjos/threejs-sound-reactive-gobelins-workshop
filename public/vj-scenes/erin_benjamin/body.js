@@ -22,7 +22,13 @@ export default class Body {
 		// right and front); rotated into view space each frame in update().
 		this.lightDirWorld = new THREE.Vector3(0.5, 0.8, 0.3).normalize()
 		this.lightScratch = new THREE.Vector3()
-		this.headBone = null   // found in init()- anchor for the 'face' camera shot
+		this.headBone = null   // found in init()- anchors for the tracked camera shots
+		this.handBone = null
+	}
+
+	getHandPosition(target) {
+		if (this.handBone) return this.handBone.getWorldPosition(target)
+		return this.getHeadPosition(target)   // fallback: track the head instead
 	}
 
 	// Head world position/orientation for the face shot (fallback: rough head
@@ -72,9 +78,11 @@ export default class Body {
 			}
 		})
 		this.object.traverse((o) => {
-			if (!this.headBone && o.isBone && /head/i.test(o.name)) this.headBone = o
+			if (!o.isBone) return
+			if (!this.headBone && /head/i.test(o.name)) this.headBone = o
+			if (!this.handBone && /hand/i.test(o.name)) this.handBone = o
 		})
-		console.log(`[erin_benjamin] head bone: ${this.headBone?.name ?? 'not found (face shot falls back to fixed height)'}`)
+		console.log(`[erin_benjamin] anchor bones: head=${this.headBone?.name ?? 'none'} hand=${this.handBone?.name ?? 'none'}`)
 		this.setMaterial(this.params.body.material)
 		console.log(`[erin_benjamin] body: ${meshCount} mesh(es)`)
 		if (meshCount === 0) console.warn('[erin_benjamin] body has no renderable meshes (skeleton only?)')

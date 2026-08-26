@@ -18,9 +18,12 @@ export default class CameraRig {
 		this.trackShot = null
 		this.faceAxis = new THREE.Vector3(0, -1, 0)   // head-bone local axis pointing out of the face (verified visually on this rig)
 		this.headPos = new THREE.Vector3()
+		this.handPos = new THREE.Vector3()
 		this.headQuat = new THREE.Quaternion()
 		this.faceDir = new THREE.Vector3()
 		this.desiredPos = new THREE.Vector3()
+		this.lookScratch = new THREE.Vector3()
+		this.upNudge = new THREE.Vector3()
 		this.camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 1000)
 		// Initial pose- update() recomputes from orbit each frame
 		const { angle, radius, baseHeight } = this.orbit
@@ -30,16 +33,35 @@ export default class CameraRig {
 
 	update(dt, audio, features) {
 		const p = this.params.camera
-		// Face shot: anchor in front of the head bone, follow it with a slight
-		// lag (handheld feel- snap on the cut itself), look straight at it.
+		// Bone-tracked shots: anchored to the skeleton, following it with a
+		// slight lag (handheld feel- snap on the cut itself).
 		if (this.trackShot && this.body) {
+			const t = this.trackShot
 			this.body.getHeadPosition(this.headPos)
 			this.body.getHeadQuaternion(this.headQuat)
 			this.faceDir.copy(this.faceAxis).applyQuaternion(this.headQuat).normalize()
-			this.desiredPos.copy(this.headPos).addScaledVector(this.faceDir, this.trackShot.dist)
-			if (this.trackShot.fresh) { this.camera.position.copy(this.desiredPos); this.trackShot.fresh = false }
+			if (t.kind === 'pov') {
+				// Through their eyes: sit just outside the face, look where it points.
+				this.desiredPos.copy(this.headPos).addScaledVector(this.faceDir, t.dist)
+				this.lookScratch.copy(this.headPos).addScaledVector(this.faceDir, 10)
+			} else if (t.kind === 'below') {
+				// Under the falling body, silhouetted against the sky above.
+				this.desiredPos.set(t.side, -t.dist, t.side2)
+				this.lookScratch.copy(this.headPos)
+			} else if (t.kind === 'hand') {
+				// Close on a hand, the body falling behind it.
+				this.body.getHandPosition(this.handPos)
+				this.faceDir.copy(this.handPos).sub(this.headPos).normalize()
+				this.desiredPos.copy(this.handPos).addScaledVector(this.faceDir, t.dist).add(this.upNudge.set(0, t.dist * 0.3, 0))
+				this.lookScratch.copy(this.handPos)
+			} else {
+				// face: in front of the head, looking straight at it.
+				this.desiredPos.copy(this.headPos).addScaledVector(this.faceDir, t.dist)
+				this.lookScratch.copy(this.headPos)
+			}
+			if (t.fresh) { this.camera.position.copy(this.desiredPos); t.fresh = false }
 			else this.camera.position.lerp(this.desiredPos, 1 - Math.exp(-dt / 0.15))
-			this.camera.lookAt(this.headPos)
+			this.camera.lookAt(this.lookScratch)
 			return
 		}
 		// Integrating into angular *velocity* (not angle directly) keeps motion

@@ -14,8 +14,14 @@ const SHOTS = [
 	{ name: 'topDown', radius: [1.2, 2.0], height: [2.6, 3.4], lookY: -0.3, speedMult: 0.9, bobMult: 0.3, calm: 1, intense: 2 },
 	// dolly: radius glides from radius[0] toward radius[1] over the shot.
 	{ name: 'dolly', radius: [6.5, 2.5], height: [0.4, 0.9], lookY: 0.1, speedMult: 0.35, bobMult: 0.5, dolly: true, calm: 3, intense: 1 },
-	// face: head-tracked- anchored in front of the head bone, follows the fall.
-	{ name: 'face', track: true, dist: [0.9, 1.4], calm: 1, intense: 2 },
+	// Bone-tracked shots (kind handled by the CameraRig):
+	// face- in front of the head, looking at it. pov- through their eyes,
+	// clouds rushing in. below- under the falling body, silhouette against the
+	// sky. hand- close on a hand, the body behind.
+	{ name: 'face', track: 'face', dist: [0.9, 1.4], calm: 1, intense: 2 },
+	{ name: 'pov', track: 'pov', dist: [0.2, 0.35], calm: 1, intense: 2 },
+	{ name: 'below', track: 'below', dist: [2.2, 3.2], calm: 2, intense: 2 },
+	{ name: 'hand', track: 'hand', dist: [0.5, 0.9], calm: 2, intense: 1 },
 ]
 
 const rand = (min, max) => min + Math.random() * (max - min)
@@ -73,9 +79,15 @@ export default class Director {
 		this.state.shot = next.name
 		this.shotTime = 0
 
-		// Head-tracked shot: the rig ignores the orbit while trackShot is set.
+		// Bone-tracked shot: the rig ignores the orbit while trackShot is set.
+		// side/side2 give the 'below' shot a random lateral offset per cut.
 		if (next.track) {
-			this.rig.trackShot = { dist: rand(next.dist[0], next.dist[1]), fresh: true }
+			this.rig.trackShot = {
+				kind: next.track,
+				dist: rand(next.dist[0], next.dist[1]),
+				side: rand(-1, 1), side2: rand(-1, 1),
+				fresh: true,
+			}
 			return
 		}
 		this.rig.trackShot = null
