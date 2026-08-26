@@ -119,18 +119,22 @@ export default class Motes {
 		// energy like everything else that moves.
 		const rise = p.rise * features.rate * (0.4 + 1.6 * features.energy)
 		const count = this.seeds.length
+		let recycled = false
 		for (let i = 0; i < count; i++) {
 			let y = this.offsets[i * 3 + 1] + dt * rise * (0.6 + this.seeds[i])
 			if (y > cy + 6) {
 				this.spawn(i, cx, cz)
 				y = cy - 6
+				recycled = true
 			}
 			this.offsets[i * 3 + 1] = y
 		}
 		const attrs = this.mesh.geometry.attributes
 		attrs.aOffset.needsUpdate = true
-		attrs.aSeed.needsUpdate = true
-		attrs.aSize.needsUpdate = true
+		if (recycled) {   // seeds/sizes only change on recycle
+			attrs.aSeed.needsUpdate = true
+			attrs.aSize.needsUpdate = true
+		}
 	}
 
 }

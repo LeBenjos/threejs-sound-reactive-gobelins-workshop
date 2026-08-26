@@ -114,17 +114,19 @@ export default class SpeedLines {
 		const cy = camera.position.y
 		const cz = camera.position.z
 		const count = this.mults.length
+		let recycled = false
 		for (let i = 0; i < count; i++) {
 			let y = this.offsets[i * 3 + 1] + dt * speed * this.mults[i]
 			if (y > cy + 10) {
 				this.spawn(i, cx, cz)
 				y = cy - 10 - Math.random() * 4
+				recycled = true
 			}
 			this.offsets[i * 3 + 1] = y
 		}
 		const attrs = this.mesh.geometry.attributes
 		attrs.aOffset.needsUpdate = true
-		attrs.aDim.needsUpdate = true
+		if (recycled) attrs.aDim.needsUpdate = true   // dims only change on recycle
 	}
 
 }

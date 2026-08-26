@@ -5,11 +5,10 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
-import { RGBShiftShader } from 'three/addons/shaders/RGBShiftShader.js'
 
 import { BLOOM_LAYER } from './config.js'
 import BloomMergeShader from './shaders/BloomMergeShader.js'
-import FisheyeShader from './shaders/FisheyeShader.js'
+import LensShader from './shaders/LensShader.js'
 
 // The postprocessing chain: selective bloom (body layer only, merged additively
 // over the base render), afterimage trails, RGB shift and a fisheye lens.
@@ -49,16 +48,14 @@ export default class PostFX {
 			vertexShader: BloomMergeShader.vertexShader,
 			fragmentShader: BloomMergeShader.fragmentShader,
 		}), 'baseTexture')
-		this.rgbShiftPass = new ShaderPass(RGBShiftShader)
-		this.rgbShiftPass.uniforms.amount.value = 0
-		this.fisheyePass = new ShaderPass(FisheyeShader)   // last lens before output
+		// One combined lens pass (fisheye + RGB shift)- was two fullscreen passes.
+		this.lensPass = new ShaderPass(LensShader)
 		const outputPass = new OutputPass()   // tone mapping + sRGB- required after bloom
 
 		this.composer.addPass(renderPass)
 		this.composer.addPass(this.afterimagePass)
 		this.composer.addPass(this.bloomMergePass)
-		this.composer.addPass(this.rgbShiftPass)
-		this.composer.addPass(this.fisheyePass)
+		this.composer.addPass(this.lensPass)
 		this.composer.addPass(outputPass)
 	}
 
@@ -82,11 +79,12 @@ export default class PostFX {
 		// Capped at 0.92 (was 0.96): above that the trails stop reading as speed
 		// and smear the whole frame into radial mush during intense passages.
 		this.afterimagePass.uniforms.damp.value = Math.min(0.92, p.afterimage.dampBase + audio.kickHard * p.afterimage.kickHardMult * e)
-		this.rgbShiftPass.enabled = p.rgbShift.enabled
-		this.rgbShiftPass.uniforms.amount.value = features.high * p.rgbShift.highMult
-		this.rgbShiftPass.uniforms.angle.value = p.rgbShift.angle
-		this.fisheyePass.enabled = p.fisheye.enabled
-		this.fisheyePass.uniforms.strength.value = p.fisheye.strengthBase + e * p.fisheye.energyMult + audio.kickHard * p.fisheye.kickHardMult * e
+		// The lens pass carries both effects; a disabled one just zeroes its term.
+		const u = this.lensPass.uniforms
+		u.strength.value = p.fisheye.enabled ? p.fisheye.strengthBase + e * p.fisheye.energyMult + audio.kickHard * p.fisheye.kickHardMult * e : 0
+		u.amount.value = p.rgbShift.enabled ? features.high * p.rgbShift.highMult : 0
+		u.angle.value = p.rgbShift.angle
+		this.lensPass.enabled = p.fisheye.enabled || p.rgbShift.enabled
 	}
 
 	render(dt) {

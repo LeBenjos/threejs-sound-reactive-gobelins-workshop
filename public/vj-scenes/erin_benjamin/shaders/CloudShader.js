@@ -79,6 +79,14 @@ export default {
 			}
 			return v;
 		}
+		// 2-octave variant for the shading probe- the shadow term is smoothstepped
+		// anyway, the missing high octaves are invisible there and it cuts the
+		// sprite's ALU noticeably (the field is the scene's biggest fragment cost).
+		// +0.09375 restores the dropped octaves' expected value, so delta
+		// against the 4-octave fbm keeps an unbiased mean.
+		float fbm2( vec2 p ) {
+			return 0.5 * noise( p ) + 0.25 * noise( p * 2.0 ) + 0.09375;
+		}
 
 		void main() {
 			float seed = vSprite.x;
@@ -106,7 +114,7 @@ export default {
 			// the noise domain so "up" stays screen-up, and the smooth warp is
 			// reused- close enough at this distance. (1-vUv.y) biases the lower
 			// half darker.
-			float above = fbm( w + vec2( -sa, ca ) * 0.48 + ( warp - 0.5 ) * 1.4 );
+			float above = fbm2( w + vec2( -sa, ca ) * 0.48 + ( warp - 0.5 ) * 1.4 );
 			float delta = n - above;
 			float shadow = min( 1.0, ( smoothstep( 0.0, 0.3, -delta ) * 0.6 + ( 1.0 - vUv.y ) * 0.25 ) * shadowMult );
 			vec3 col = mix( cloudColor, shadowColor, shadow );

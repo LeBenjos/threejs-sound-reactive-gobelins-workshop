@@ -142,12 +142,14 @@ export default class Clouds {
 		this.material.uniforms.time.value = this.churn
 
 		const count = this.layerOf.length
+		let recycled = false
 		for (let i = 0; i < count; i++) {
 			const layer = CLOUD_LAYERS[this.layerOf[i]]
 			let y = this.offsets[i * 3 + 1] + baseDy * layer.speedMult
 			if (y > layer.yRange) {
 				this.spawn(i)
 				y = -layer.yRange
+				recycled = true
 			}
 			this.offsets[i * 3 + 1] = y
 			// Vertical edge envelope: sprites are born transparent at the bottom of
@@ -162,8 +164,8 @@ export default class Clouds {
 		}
 		const attrs = this.mesh.geometry.attributes
 		attrs.aOffset.needsUpdate = true
-		attrs.aScale.needsUpdate = true   // spawn() rewrites scales on recycle
 		attrs.aFade.needsUpdate = true
+		if (recycled) attrs.aScale.needsUpdate = true   // scales only change on recycle
 	}
 
 }
