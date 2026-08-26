@@ -76,7 +76,9 @@ export default class PostFX {
 		this.bloomPass.threshold = p.bloom.threshold
 		this.bloomMergePass.enabled = p.bloom.enabled
 		this.afterimagePass.enabled = p.afterimage.enabled
-		this.afterimagePass.uniforms.damp.value = Math.min(0.96, p.afterimage.dampBase + audio.kickHard * p.afterimage.kickHardMult * e)
+		// Capped at 0.92 (was 0.96): above that the trails stop reading as speed
+		// and smear the whole frame into radial mush during intense passages.
+		this.afterimagePass.uniforms.damp.value = Math.min(0.92, p.afterimage.dampBase + audio.kickHard * p.afterimage.kickHardMult * e)
 		this.rgbShiftPass.enabled = p.rgbShift.enabled
 		this.rgbShiftPass.uniforms.amount.value = features.high * p.rgbShift.highMult
 		this.rgbShiftPass.uniforms.angle.value = p.rgbShift.angle

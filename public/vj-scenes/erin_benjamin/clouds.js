@@ -85,6 +85,9 @@ export default class Clouds {
 		const base = p.riseSpeedBase * (floor + (1 - floor) * features.energy)
 		const baseRise = base + features.energy * p.riseEnergyMult + features.flow * p.riseKickMult * features.energy
 		const baseDy = dt * baseRise
+		// Sprites ease back as the energy rises: at full intensity they streak as
+		// translucent accents instead of stacking a second wall over the FBM sky.
+		const spriteOpacity = p.opacity * (1 - 0.35 * features.energy)
 		for (const cloud of this.group.children) {
 			const layer = CLOUD_LAYERS[cloud.userData.layerIndex]
 			cloud.position.y += baseDy * layer.speedMult
@@ -95,7 +98,7 @@ export default class Clouds {
 				cloud.position.x = Math.cos(angle) * radius
 				cloud.position.z = Math.sin(angle) * radius
 			}
-			cloud.material.uniforms.opacity.value = p.opacity
+			cloud.material.uniforms.opacity.value = spriteOpacity
 		}
 		this.billboard(camera)
 	}
