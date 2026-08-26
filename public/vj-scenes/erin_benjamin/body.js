@@ -19,9 +19,6 @@ const EVENT_TUNING = {
 	// endAt cuts the clip before its grounded landing recovery (a pose far from
 	// falling- blending from it read as a jolt); returnFade glides back long.
 	backflip: { fade: 0.6, startAt: 0.15, endAt: 0.75, timeScale: 0.23, limbMix: 2.0, returnFade: 1.2 },
-	// Same treatment for the soar: slow blend + some flail bleeding through
-	// (lighter mix- the glide pose must stay readable).
-	flying: { fade: 0.6, limbMix: 1.4 },
 	// Back-first fall: already a falling clip, so no limb mix needed- just a
 	// slow roll-over blend.
 	backfalling: { fade: 0.9 },
