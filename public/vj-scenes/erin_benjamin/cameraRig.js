@@ -41,8 +41,11 @@ export default class CameraRig {
 		const roll = Math.sin(t * p.rollSpeed * Math.PI * 2) * p.rollAmp * (0.4 + 0.6 * features.energy)
 		this.camera.rotateZ(roll)
 		// Amplitude follows the tempo too (pace 0..1): a slow track buffets
-		// gently even when loud, a fast one shakes fully.
-		const amp = p.shake * features.energy * features.energy * (0.3 + 0.7 * features.pace)
+		// gently even when loud, a fast one shakes fully. And it scales with the
+		// distance to the subject: a fixed world-space jitter that reads as a
+		// breeze on a wide shot is a violent judder at face/hand distance.
+		const dist = this.camera.position.distanceTo(this.lookScratch)
+		const amp = p.shake * features.energy * features.energy * (0.3 + 0.7 * features.pace) * Math.min(1, dist / 4.5)
 		if (amp > 0.0001) {
 			const ts = t * features.rate   // jitter frequency rides the world rate as well
 			this.camera.position.x += (Math.sin(ts * 39.7) + Math.sin(ts * 23.3) * 0.6) * amp * 0.5
@@ -92,7 +95,8 @@ export default class CameraRig {
 		const { angle, radius, baseHeight, verticalPhase } = this.orbit
 		const bob = (Math.sin(verticalPhase) * p.verticalAmp + features.energy * p.verticalEnergyMult) * this.shotBobMult
 		this.camera.position.set(Math.sin(angle) * radius, baseHeight + bob, Math.cos(angle) * radius)
-		this.camera.lookAt(0, this.lookY, 0)
+		this.lookScratch.set(0, this.lookY, 0)   // applyFeel scales the shake by subject distance
+		this.camera.lookAt(this.lookScratch)
 		this.applyFeel(dt, features)
 	}
 
