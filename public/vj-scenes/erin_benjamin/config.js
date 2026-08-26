@@ -54,15 +54,15 @@ export const COLOR_PRESETS = [
 		name: 'Aurora',
 		skyTop: new THREE.Color(0x05203f), skyBottom: new THREE.Color(0x129074),
 		skyCloudColor: new THREE.Color(0x96ffe4), cloudsColor: new THREE.Color(0x63f5cf),
-		bodyRim: new THREE.Color(0xff4fd8),
+		bodyRim: new THREE.Color(0xffb35c),
 	},
 	{
 		// The danger card for the drop-driven palette slams: near-black plum over
-		// a burning horizon, scorched clouds, mint rim cutting through the heat.
+		// a burning horizon, scorched clouds, glacier-blue rim cutting through the heat.
 		name: 'Ember',
 		skyTop: new THREE.Color(0x200913), skyBottom: new THREE.Color(0xd14a2b),
 		skyCloudColor: new THREE.Color(0xe8794f), cloudsColor: new THREE.Color(0x8c3430),
-		bodyRim: new THREE.Color(0x3dffb0),
+		bodyRim: new THREE.Color(0x66c7ff),
 	},
 ]
 
