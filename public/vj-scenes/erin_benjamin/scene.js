@@ -7,6 +7,7 @@ import CameraRig from './cameraRig.js'
 import Clouds from './clouds.js'
 import { createDefaultParams } from './config.js'
 import Director from './director.js'
+import MusicEvents from './events.js'
 import Gui from './gui.js'
 import PostFX from './postfx.js'
 import Sky from './sky.js'
@@ -55,6 +56,7 @@ export default class ErinBenjaminScene {
 
 		this.postfx = new PostFX(this.renderer, this.scene, this.cameraRig.camera, this.params)
 		this.director = new Director(this.params, this.cameraRig)
+		this.events = new MusicEvents(this.params, this.body, this.director)
 		this.autopilot = new Autopilot(this.params, this.sky, this.clouds, this.body)
 		this.gui = new Gui(this)
 		this.autopilot.onPresetAdvanced = (idx) => this.gui.onPresetAdvanced(idx)
@@ -88,6 +90,7 @@ export default class ErinBenjaminScene {
 
 		// The body breathes with the bass.
 		this.pivot.scale.setScalar(1 + this.features.bass * this.params.body.bassScale)
+		this.events.update(dt, a, this.features)
 		this.director.update(dt, a, this.features)
 		this.cameraRig.update(dt, a, this.features)
 		this.sky.update(dt, a, this.features, this.cameraRig.camera)

@@ -137,6 +137,13 @@ export default class Gui {
 		director.addBinding(params.director, 'minEnergy', { min: 0, max: 1, step: 0.05 })
 		director.addBinding(params.director, 'zoomDrift', { min: 0, max: 1, step: 0.05 })
 
+		const events = this.pane.addFolder({ title: 'Events' })
+		events.addBinding(this.scene.events.state, 'last', { readonly: true })
+		events.addBinding(params.events, 'enabled')
+		events.addBinding(params.events, 'chance', { min: 0, max: 1, step: 0.05 })
+		events.addBinding(params.events, 'cooldown', { min: 0, max: 60, step: 1 })
+		events.addBinding(params.events, 'minEnergy', { min: 0, max: 1, step: 0.05 })
+
 		const cam = this.pane.addFolder({ title: 'Camera' })
 		cam.addBinding(params.camera, 'baseSpeed', { min: 0, max: 2, step: 0.01 })
 		cam.addBinding(params.camera, 'kickMult', { min: 0, max: 20, step: 0.1 })

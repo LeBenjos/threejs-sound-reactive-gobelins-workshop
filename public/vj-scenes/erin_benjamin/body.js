@@ -6,16 +6,26 @@ import { BLOOM_LAYER, COLOR_PRESETS, TARGET_HEIGHT } from './config.js'
 import RimShader from './shaders/RimShader.js'
 
 const BODY_URL = './assets/body.glb'
-const FALLING_URL = './assets/falling.fbx'
+const CLIP_URLS = {
+	falling: './assets/falling.fbx',   // the base loop
+	backflip: './assets/Backflip.fbx', // rare event- one-shot
+	flying: './assets/Flying.fbx',     // rare event- held a few seconds
+}
+const FADE = 0.35   // crossfade duration between animations (seconds)
 
-// The falling character: GLB mesh + FBX animation clip retargeted onto it.
-// Owns the skinned model, its animation mixer and its (single, shared) material.
+// The falling character: GLB mesh + FBX animation clips retargeted onto it.
+// `falling` loops as the base state; playEvent() crossfades to a rare event
+// clip (backflip one-shot, flying held) and back. Owns the skinned model,
+// its animation mixer and its (single, shared) material.
 export default class Body {
 
 	constructor(params) {
 		this.params = params
 		this.object = null
-		this.fallingClip = null
+		this.clips = {}
+		this.actions = {}
+		this.currentAction = null
+		this.eventTimer = 0   // seconds left on a held event (flying)
 		this.mixer = null
 		this.mat = null
 		// Fixed world-space light for the rim material's modeling (above, slightly
@@ -50,19 +60,21 @@ export default class Body {
 			console.error(`[erin_benjamin] failed to load ${url}`, err)
 			return null
 		})
-		const [gltf, falling] = await Promise.all([
+		const names = Object.keys(CLIP_URLS)
+		const [gltf, ...fbxes] = await Promise.all([
 			safeLoad(gltfLoader, BODY_URL),
-			safeLoad(fbxLoader, FALLING_URL),
+			...names.map((n) => safeLoad(fbxLoader, CLIP_URLS[n])),
 		])
 		this.object = gltf?.scene ?? null
-		// The user-provided falling.fbx is the intended animation; body.glb may also
-		// embed a T-pose/idle clip we want to ignore.
-		const fbxClip = falling?.animations?.[0] ?? null
-		const gltfClip = gltf?.animations?.[0] ?? null
-		this.fallingClip = fbxClip ?? gltfClip
-		console.log(`[erin_benjamin] clip source: ${fbxClip ? 'falling.fbx' : gltfClip ? 'body.glb (fallback)' : 'none'}`)
+		names.forEach((n, i) => {
+			const clip = fbxes[i]?.animations?.[0] ?? null
+			if (clip) this.clips[n] = clip
+		})
+		// body.glb may embed a T-pose/idle clip- only used if falling.fbx failed.
+		if (!this.clips.falling && gltf?.animations?.[0]) this.clips.falling = gltf.animations[0]
+		console.log(`[erin_benjamin] clips loaded: ${Object.keys(this.clips).join(', ') || 'none'}`)
 		if (!this.object) console.error('[erin_benjamin] body missing- scene will render empty')
-		if (!this.fallingClip) console.warn('[erin_benjamin] no animation clip found')
+		if (!this.clips.falling) console.warn('[erin_benjamin] no base animation clip found')
 	}
 
 	init(pivot) {
@@ -89,16 +101,52 @@ export default class Body {
 
 		pivot.add(this.object)
 
-		if (this.fallingClip) {
-			this.remapClipToBody()
+		if (this.clips.falling) {
 			this.mixer = new THREE.AnimationMixer(this.object)
-			this.mixer.clipAction(this.fallingClip).play()
-			this.diagnoseRetarget()
+			for (const [name, clip] of Object.entries(this.clips)) {
+				this.remapClipToBody(clip)
+				this.diagnoseRetarget(clip, name)
+				this.actions[name] = this.mixer.clipAction(clip)
+			}
+			// backflip is a one-shot: clamp on the last frame while fading back
+			// (the 'finished' listener below triggers the return to falling).
+			if (this.actions.backflip) {
+				this.actions.backflip.setLoop(THREE.LoopOnce)
+				this.actions.backflip.clampWhenFinished = true
+			}
+			this.mixer.addEventListener('finished', (e) => {
+				if (e.action === this.actions.backflip) this.fadeTo('falling')
+			})
+			this.actions.falling.play()
+			this.currentAction = this.actions.falling
 		}
+	}
+
+	// Crossfade to a rare event clip: backflip plays once then returns by
+	// itself; flying holds `hold` seconds (counted down in update()) before
+	// returning. False if the clip is missing or an event is already running.
+	playEvent(name, hold = 0) {
+		if (!this.actions[name] || this.currentAction !== this.actions.falling) return false
+		this.fadeTo(name)
+		this.eventTimer = hold
+		return true
+	}
+
+	fadeTo(name, duration = FADE) {
+		const to = this.actions[name]
+		if (!to || this.currentAction === to) return
+		to.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(duration).play()
+		this.currentAction?.fadeOut(duration)
+		this.currentAction = to
 	}
 
 	update(dt, audio, features, camera) {
 		if (this.mixer) this.mixer.update(dt)
+		// Held event (flying) running out → glide back to the base fall.
+		if (this.eventTimer > 0) {
+			this.eventTimer -= dt
+			if (this.eventTimer <= 0) this.fadeTo('falling')
+		}
 		// Rim material: the contour glow pulses on the strong beats (energy-gated,
 		// like the other flash effects), and the fixed world light is rotated into
 		// view space so the modeling sweeps across the body as the camera orbits.
@@ -139,7 +187,7 @@ export default class Body {
 		this.object.position.sub(center)
 	}
 
-	remapClipToBody() {
+	remapClipToBody(clip) {
 		// Body bones may carry a numeric suffix (e.g. "MaleBaseMeshHips_01") absent
 		// from the clip's track names ("MaleBaseMeshHips"). Build a stripped-key map
 		// then rewrite each track name to the matching body bone.
@@ -150,7 +198,7 @@ export default class Body {
 			if (!bodyByStrippedName.has(stripped)) bodyByStrippedName.set(stripped, o.name)
 		})
 		let remapped = 0
-		for (const track of this.fallingClip.tracks) {
+		for (const track of clip.tracks) {
 			const lastDot = track.name.lastIndexOf('.')
 			if (lastDot < 0) continue
 			const trackBone = track.name.slice(0, lastDot)
@@ -161,16 +209,15 @@ export default class Body {
 				remapped++
 			}
 		}
-		console.log(`[erin_benjamin] remapped ${remapped}/${this.fallingClip.tracks.length} tracks to body bones`)
+		console.log(`[erin_benjamin] "${clip.name}": remapped ${remapped}/${clip.tracks.length} tracks to body bones`)
 	}
 
-	diagnoseRetarget() {
-		const clip = this.fallingClip
+	diagnoseRetarget(clip, label) {
 		const bodyBones = new Set()
 		this.object.traverse((o) => { if (o.isBone) bodyBones.add(o.name) })
 		const clipTargets = new Set(clip.tracks.map((t) => t.name.split('.')[0]))
 		const matched = [...clipTargets].filter((n) => bodyBones.has(n)).length
-		console.log(`[erin_benjamin] clip "${clip.name}" - ${clip.duration.toFixed(2)}s, ${clip.tracks.length} tracks`)
+		console.log(`[erin_benjamin] ${label} "${clip.name}" - ${clip.duration.toFixed(2)}s, ${clip.tracks.length} tracks`)
 		console.log(`[erin_benjamin] body has ${bodyBones.size} bones, clip targets ${clipTargets.size} bones, ${matched} match`)
 		if (matched === 0) {
 			console.error('[erin_benjamin] zero matching bones- animation will not affect body. Sample names:')
