@@ -74,13 +74,16 @@ export default class AudioFeatures {
 		if (kickHit) {
 			if (this.lastKickAt !== null) {
 				let gap = this.time - this.lastKickAt
-				// Octave folding against the current tempo: a gap ~2x/4x the beat
-				// period is a MISSED beat (breakdowns thin the kicks out, the tempo
-				// itself doesn't halve)- fold it back onto the grid. Same for
-				// double-fires at ~half the period.
+				// Octave folding, but ONLY for gaps near an integer multiple of the
+				// current period (±15%- the signature of MISSED beats on the same
+				// grid, i.e. a breakdown). A gap that fits no multiple is a genuine
+				// tempo change and must pass through raw, or the estimate can never
+				// move. Same idea for double-fires near half the period.
 				const period = 60 / this.bpm
-				for (let i = 0; i < 3 && gap > period * 1.55; i++) gap /= 2
-				for (let i = 0; i < 2 && gap < period * 0.55; i++) gap *= 2
+				const ratio = gap / period
+				const nearest = Math.round(ratio)
+				if (nearest >= 2 && Math.abs(ratio - nearest) < 0.15 * nearest) gap /= nearest
+				else if (ratio > 0.4 && ratio < 0.6) gap *= 2
 				if (gap >= 0.25 && gap <= 2.0) {   // 30-240 bpm plausibility window
 					this.intervals.push(gap)
 					if (this.intervals.length > 6) this.intervals.shift()
