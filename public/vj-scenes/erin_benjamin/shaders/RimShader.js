@@ -21,7 +21,7 @@ export default {
 		#include <common>
 		#include <skinning_pars_vertex>
 		varying vec3 vNormal;
-		varying vec3 vViewDir;
+		varying vec3 vViewPos;
 		void main() {
 			#include <beginnormal_vertex>
 			#include <skinbase_vertex>
@@ -30,7 +30,11 @@ export default {
 			#include <skinning_vertex>
 			vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );
 			vNormal = normalize( normalMatrix * objectNormal );
-			vViewDir = normalize( - mvPosition.xyz );
+			// Raw view position- normalized in the fragment shader. Normalizing here
+			// NaNs when a vertex crosses the camera (length ~0), and the NaN varying
+			// paints the whole triangle black; fragments are always past the near
+			// plane, so the per-fragment normalize is safe.
+			vViewPos = mvPosition.xyz;
 			gl_Position = projectionMatrix * mvPosition;
 		}
 	`,
@@ -42,10 +46,12 @@ export default {
 		uniform vec3 lightDir;
 		uniform float shading;
 		varying vec3 vNormal;
-		varying vec3 vViewDir;
+		varying vec3 vViewPos;
 		void main() {
 			vec3 n = normalize( vNormal );
-			float facing = max( dot( n, normalize( vViewDir ) ), 0.0 );
+			// clamp (not max): float error can push the dot past 1.0, and
+			// pow(negative, x) is NaN- renders as a black triangle.
+			float facing = clamp( dot( n, normalize( - vViewPos ) ), 0.0, 1.0 );
 			float fresnel = pow( 1.0 - facing, rimPower );
 			// Half-Lambert modeling from a fixed world light (rotated to view space
 			// on the CPU): the lit side stays at full baseColor- luminance never
