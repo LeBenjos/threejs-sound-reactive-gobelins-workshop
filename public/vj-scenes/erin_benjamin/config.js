@@ -126,13 +126,19 @@ export function createDefaultParams() {
 			riseKickMult: 4.0,
 			opacity: 0.85,
 			color: '#ffffff',
+			haze: 0.7,   // aerial perspective- distant sprites melt into the horizon color
 		},
+		// Luminous dust drifting around the camera- stronger in calm passages.
+		motes: { enabled: true, count: 120, opacity: 0.5, radius: 6 },
+		// Fake volumetric shafts hanging from above, slowly orbiting.
+		rays: { enabled: true, count: 8, opacity: 0.08 },
 		// Freefall speed streaks near the camera- opacity gated by energy².
 		lines: { enabled: true, count: 70, opacity: 0.4, speedBase: 5, speedEnergyMult: 16, radius: 6 },
 		// threshold must stay ABOVE the white body's max luminance (~0.70 with the
 		// #d5d5dd base): only the rim-boosted edges cross it, so the bloom halos
 		// the contour instead of flaring the whole body.
-		bloom: { enabled: true, strengthBase: 0.15, energyMult: 0.35, kickHardMult: 2.2, radius: 1.50, threshold: 0.85 },
+		// veilStrength/veilThreshold: the dreamy full-frame bloom veil (0 = off).
+		bloom: { enabled: true, strengthBase: 0.15, energyMult: 0.35, kickHardMult: 2.2, radius: 1.50, threshold: 0.85, veilStrength: 0.22, veilThreshold: 0.5 },
 		afterimage: { enabled: true, dampBase: 0.85, kickHardMult: 0.2 },
 		rgbShift: { enabled: true, highMult: 0.006, angle: 1.98 },
 		fisheye: { enabled: true, strengthBase: 1.0, energyMult: 0.45, kickHardMult: 1.3 },

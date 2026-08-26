@@ -187,6 +187,20 @@ export default class Gui {
 		lines.addBinding(params.lines, 'speedEnergyMult', { min: 0, max: 40, step: 0.5 })
 		lines.addBinding(params.lines, 'radius', { min: 1, max: 15, step: 0.5 })
 
+		const dreamy = this.pane.addFolder({ title: 'Dreamy', expanded: false })
+		dreamy.addBinding(params.motes, 'enabled', { label: 'poussières' })
+		dreamy.addBinding(params.motes, 'count', { min: 0, max: 400, step: 1 }).on('change', (ev) => {
+			if (ev.last) this.scene.motes.rebuild()
+		})
+		dreamy.addBinding(params.motes, 'opacity', { min: 0, max: 1, step: 0.01 })
+		dreamy.addBinding(params.rays, 'enabled', { label: 'rayons' })
+		dreamy.addBinding(params.rays, 'count', { min: 0, max: 20, step: 1 }).on('change', (ev) => {
+			if (ev.last) this.scene.rays.rebuild()
+		})
+		dreamy.addBinding(params.rays, 'opacity', { min: 0, max: 0.3, step: 0.005 })
+		dreamy.addBinding(params.bloom, 'veilStrength', { min: 0, max: 0.8, step: 0.01, label: 'voile bloom' })
+		dreamy.addBinding(params.bloom, 'veilThreshold', { min: 0, max: 1, step: 0.01, label: 'seuil voile' })
+
 		const skyFolder = this.pane.addFolder({ title: 'Sky', expanded: false })
 		skyFolder.addBinding(params.sky, 'enabled')
 		skyFolder.addBinding(params.sky, 'scrollSpeedBase', { min: 0, max: 0.5, step: 0.005 })
@@ -214,6 +228,7 @@ export default class Gui {
 		cloudsFolder.addBinding(params.clouds, 'riseEnergyMult', { min: 0, max: 8, step: 0.05 })
 		cloudsFolder.addBinding(params.clouds, 'riseKickMult', { min: 0, max: 12, step: 0.1 })
 		cloudsFolder.addBinding(params.clouds, 'opacity', { min: 0, max: 1, step: 0.01 })
+		cloudsFolder.addBinding(params.clouds, 'haze', { min: 0, max: 1, step: 0.01 })
 		cloudsFolder.addBinding(params.clouds, 'color', { view: 'color' }).on('change', (ev) => {
 			clouds.setColor(ev.value)
 		})

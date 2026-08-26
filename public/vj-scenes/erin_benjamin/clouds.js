@@ -27,6 +27,7 @@ export default class Clouds {
 		// Neutral shadow fallback- the autopilot color cycle (lerpColors)
 		// replaces it with the palette-derived tint on the first frame.
 		this.material.uniforms.shadowColor.value.set(params.clouds.color).multiplyScalar(0.75)
+		this.material.uniforms.hazeColor.value.set(params.sky.bottomColor)
 		this.baseGeometry = new THREE.PlaneGeometry(1, 1)
 		this.mixScratch = new THREE.Color()      // reused per-frame by lerpColors to avoid GC
 		this.shadowScratch = new THREE.Color()   // same, for the sprites' underside tint
@@ -108,6 +109,8 @@ export default class Clouds {
 		this.material.uniforms.cloudColor.value.copy(mixed)
 		this.material.uniforms.shadowColor.value
 			.copy(A.skyTop).lerp(B.skyTop, f).lerp(mixed, 0.55).multiplyScalar(0.8)
+		// Distant sprites melt toward the horizon color (aerial perspective).
+		this.material.uniforms.hazeColor.value.copy(A.skyBottom).lerp(B.skyBottom, f)
 	}
 
 	update(dt, audio, features, camera) {
@@ -133,6 +136,7 @@ export default class Clouds {
 		// Sprites ease back as the energy rises: at full intensity they streak as
 		// translucent accents instead of stacking a second wall over the FBM sky.
 		this.material.uniforms.opacity.value = p.opacity * (1 - 0.25 * features.energy)
+		this.material.uniforms.hazeAmount.value = p.haze
 		// Placid billows when calm, boiling on the drops.
 		this.churn += dt * (0.06 + features.energy * 0.3)
 		this.material.uniforms.time.value = this.churn

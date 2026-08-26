@@ -9,7 +9,9 @@ import { createDefaultParams } from './config.js'
 import Director from './director.js'
 import MusicEvents from './events.js'
 import Gui from './gui.js'
+import Motes from './motes.js'
 import PostFX from './postfx.js'
+import Rays from './rays.js'
 import Sky from './sky.js'
 import SpeedLines from './speedLines.js'
 
@@ -50,6 +52,8 @@ export default class ErinBenjaminScene {
 		this.sky = new Sky(this.scene, this.params)
 		this.clouds = new Clouds(this.scene, this.params)
 		this.speedLines = new SpeedLines(this.scene, this.params)
+		this.motes = new Motes(this.scene, this.params)
+		this.rays = new Rays(this.scene, this.params)
 
 		this.pivot = new THREE.Group()
 		this.scene.add(this.pivot)
@@ -110,6 +114,8 @@ export default class ErinBenjaminScene {
 		this.sky.update(dt, a, this.features, this.cameraRig.camera)
 		this.clouds.update(dt, a, this.features, this.cameraRig.camera)
 		this.speedLines.update(dt, a, this.features, this.cameraRig.camera)
+		this.motes.update(dt, this.features, this.cameraRig.camera)
+		this.rays.update(dt, this.features)
 		this.postfx.update(a, this.features)
 		this.postfx.render(dt)
 	}

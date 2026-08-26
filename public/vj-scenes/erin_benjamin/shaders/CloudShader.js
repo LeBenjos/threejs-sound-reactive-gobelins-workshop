@@ -13,6 +13,8 @@ export default {
 		time: { value: 0 },        // churn clock- integrated in clouds.js, energy-driven
 		cloudColor: { value: new THREE.Color(0xffffff) },
 		shadowColor: { value: new THREE.Color(0xbfbfbf) },   // kept in-palette by clouds.js (preset skyTop pull)
+		hazeColor: { value: new THREE.Color(0xbfe1ff) },     // the preset's horizon- lerped with the color cycle
+		hazeAmount: { value: 0.7 },
 	},
 	vertexShader: /* glsl */`
 		attribute vec3 aOffset;
@@ -47,6 +49,8 @@ export default {
 		uniform float time;
 		uniform vec3 cloudColor;
 		uniform vec3 shadowColor;
+		uniform vec3 hazeColor;
+		uniform float hazeAmount;
 		varying vec2 vUv;
 		varying vec3 vViewPos;
 		varying vec3 vSprite;
@@ -111,12 +115,18 @@ export default {
 			// the body's rim language.
 			float lining = smoothstep( 0.1, 0.4, delta ) * ( 1.0 - shadow );
 			col += mix( cloudColor, vec3( 1.0 ), 0.5 ) * lining * 0.3;
+			// Aerial perspective: distant sprites melt toward the preset's horizon
+			// color and thin out- the depth turns milky instead of staying crisp
+			// to the last layer. THE dreamy ingredient.
+			float dist = length( vViewPos );
+			float haze = smoothstep( 25.0, 110.0, dist ) * hazeAmount;
+			col = mix( col, hazeColor, haze );
 			// The close camera shots orbit INSIDE the near cloud band, so sprites
 			// can cross the lens: without this they pop in as huge dark blobs the
 			// instant the billboard flips past the camera. Dissolve them over the
 			// last 2 world units instead- fully gone before the near plane.
-			float nearFade = smoothstep( 0.7, 2.0, length( vViewPos ) );
-			float alpha = body * puff * opacity * vFade * nearFade;
+			float nearFade = smoothstep( 0.7, 2.0, dist );
+			float alpha = body * puff * opacity * vFade * nearFade * ( 1.0 - haze * 0.35 );
 			if ( alpha < 0.01 ) discard;   // avoid sorting artifacts on near-empty pixels
 			gl_FragColor = vec4( col, alpha );
 		}
