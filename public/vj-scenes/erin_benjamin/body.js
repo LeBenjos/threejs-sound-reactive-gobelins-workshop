@@ -188,28 +188,44 @@ export default class Body {
 	}
 
 	remapClipToBody(clip) {
-		// Body bones may carry a numeric suffix (e.g. "MaleBaseMeshHips_01") absent
-		// from the clip's track names ("MaleBaseMeshHips"). Build a stripped-key map
-		// then rewrite each track name to the matching body bone.
-		const bodyByStrippedName = new Map()
+		// Two naming worlds meet here. Body bones: "MaleBaseMeshHips_01"
+		// (suffix _NN). Native clips (falling.fbx) track "MaleBaseMeshHips"-
+		// matched by the stripped map. Foreign Mixamo clips (Backflip/Flying)
+		// track "mixamorigHips"- matched by suffix after stripping the mixamorig
+		// prefix ("Hips" → the body bone whose stripped name ends with it).
+		const bones = []
+		const byStripped = new Map()
 		this.object.traverse((o) => {
 			if (!o.isBone) return
 			const stripped = o.name.replace(/_\d+$/, '')
-			if (!bodyByStrippedName.has(stripped)) bodyByStrippedName.set(stripped, o.name)
+			bones.push([stripped, o.name])
+			if (!byStripped.has(stripped)) byStripped.set(stripped, o.name)
 		})
+		const resolve = (trackBone) => {
+			if (byStripped.has(trackBone)) return { name: byStripped.get(trackBone), foreign: false }
+			const core = trackBone.replace(/^mixamorig:?/i, '')
+			if (core !== trackBone) {
+				const hit = bones.find(([stripped]) => stripped.endsWith(core))
+				if (hit) return { name: hit[1], foreign: true }
+			}
+			return null
+		}
 		let remapped = 0
-		for (const track of clip.tracks) {
+		let dropped = 0
+		clip.tracks = clip.tracks.filter((track) => {
 			const lastDot = track.name.lastIndexOf('.')
-			if (lastDot < 0) continue
+			if (lastDot < 0) return true
 			const trackBone = track.name.slice(0, lastDot)
 			const prop = track.name.slice(lastDot)
-			const mapped = bodyByStrippedName.get(trackBone)
-			if (mapped && mapped !== trackBone) {
-				track.name = mapped + prop
-				remapped++
-			}
-		}
-		console.log(`[erin_benjamin] "${clip.name}": remapped ${remapped}/${clip.tracks.length} tracks to body bones`)
+			const hit = resolve(trackBone)
+			if (!hit) return true
+			// Foreign rig: rotations only- position/scale amplitudes don't
+			// transfer between rigs, and root motion is meaningless in free fall.
+			if (hit.foreign && prop !== '.quaternion') { dropped++; return false }
+			if (hit.name !== trackBone) { track.name = hit.name + prop; remapped++ }
+			return true
+		})
+		console.log(`[erin_benjamin] "${clip.name}": remapped ${remapped}, dropped ${dropped}, kept ${clip.tracks.length} tracks`)
 	}
 
 	diagnoseRetarget(clip, label) {
