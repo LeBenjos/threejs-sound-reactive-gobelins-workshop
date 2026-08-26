@@ -193,6 +193,7 @@ export default class Gui {
 			if (ev.last) this.scene.motes.rebuild()
 		})
 		dreamy.addBinding(params.motes, 'opacity', { min: 0, max: 1, step: 0.01 })
+		dreamy.addBinding(params.motes, 'rise', { min: 0, max: 4, step: 0.05, label: 'vitesse montée' })
 		dreamy.addBinding(params.rays, 'enabled', { label: 'rayons' })
 		dreamy.addBinding(params.rays, 'count', { min: 0, max: 20, step: 1 }).on('change', (ev) => {
 			if (ev.last) this.scene.rays.rebuild()

@@ -20,12 +20,14 @@ const MoteShader = {
 		void main() {
 			vUv = uv;
 			vSeed = aSeed;
-			// Slow per-mote wander- no CPU involved.
+			// Slow per-mote wander- no CPU involved. Mostly HORIZONTAL: the motes
+			// must ride the upward flow like everything else (we are falling)-
+			// vertical bobbing read as them hanging still against the stream.
 			vec3 wander = vec3(
-				sin( time * 0.31 + aSeed * 17.0 ),
-				sin( time * 0.23 + aSeed * 31.0 ),
-				cos( time * 0.27 + aSeed * 23.0 )
-			) * 0.35;
+				sin( time * 0.31 + aSeed * 17.0 ) * 0.35,
+				sin( time * 0.23 + aSeed * 31.0 ) * 0.08,
+				cos( time * 0.27 + aSeed * 23.0 ) * 0.35
+			);
 			// Screen-aligned billboard (a round dot has no orientation).
 			vec4 mv = viewMatrix * vec4( aOffset + wander, 1.0 );
 			mv.xy += position.xy * aSize;
@@ -112,7 +114,10 @@ export default class Motes {
 		const cx = camera.position.x
 		const cy = camera.position.y
 		const cz = camera.position.z
-		const rise = 0.12 * features.rate
+		// The motes ride the fall's upward stream- slower than the clouds (they
+		// are weightless specks) but clearly directional, scaled by tempo and
+		// energy like everything else that moves.
+		const rise = p.rise * features.rate * (0.4 + 1.6 * features.energy)
 		const count = this.seeds.length
 		for (let i = 0; i < count; i++) {
 			let y = this.offsets[i * 3 + 1] + dt * rise * (0.6 + this.seeds[i])

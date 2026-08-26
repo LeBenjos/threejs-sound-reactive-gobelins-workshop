@@ -128,8 +128,8 @@ export function createDefaultParams() {
 			color: '#ffffff',
 			haze: 0.7,   // aerial perspective- distant sprites melt into the horizon color
 		},
-		// Luminous dust drifting around the camera- stronger in calm passages.
-		motes: { enabled: true, count: 120, opacity: 0.5, radius: 6 },
+		// Luminous dust riding the fall's upward stream- stronger in calm passages.
+		motes: { enabled: true, count: 120, opacity: 0.5, radius: 6, rise: 1.2 },
 		// Fake volumetric shafts hanging from above, slowly orbiting.
 		rays: { enabled: true, count: 8, opacity: 0.08 },
 		// Freefall speed streaks near the camera- opacity gated by energy².
