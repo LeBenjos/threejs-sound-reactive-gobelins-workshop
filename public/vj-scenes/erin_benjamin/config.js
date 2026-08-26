@@ -73,9 +73,10 @@ export function createDefaultParams() {
 		// chainChance: an expiring accent may cut straight to another shot
 		// instead of returning to base (geometric decay- base stays the norm).
 		director: { enabled: true, accentChance: 0.6, accentCooldown: 6, accentMin: 2.5, accentMax: 5, minEnergy: 0.45, zoomDrift: 0.7, chainChance: 0.35 },
-		// Rare animation events (backflip / flying): low chance + long cooldown
-		// on the hard kicks ⇒ roughly one event every 30-60s. Rarity is the point.
-		events: { enabled: true, chance: 0.15, cooldown: 20, minEnergy: 0.3 },
+		// Rare animation events (backflip / backfalling): low chance + long
+		// cooldown on the hard kicks ⇒ roughly one event every 1.5-2.5 min.
+		// Rarity is the point.
+		events: { enabled: true, chance: 0.08, cooldown: 45, minEnergy: 0.3 },
 		body: {
 			material: 'rim',
 			bassScale: 0.55,
