@@ -126,6 +126,14 @@ export default class Gui {
 		}
 		this.refreshBodyMatBindings()
 
+		const director = this.pane.addFolder({ title: 'Director' })
+		director.addBinding(this.scene.director.state, 'shot', { readonly: true })
+		director.addBinding(params.director, 'enabled')
+		director.addBinding(params.director, 'cutOnKickHard')
+		director.addBinding(params.director, 'minShot', { min: 0.5, max: 6, step: 0.1 })
+		director.addBinding(params.director, 'maxShotCalm', { min: 4, max: 30, step: 0.5 })
+		director.addBinding(params.director, 'maxShotIntense', { min: 1, max: 15, step: 0.5 })
+
 		const cam = this.pane.addFolder({ title: 'Camera' })
 		cam.addBinding(params.camera, 'baseSpeed', { min: 0, max: 2, step: 0.01 })
 		cam.addBinding(params.camera, 'kickMult', { min: 0, max: 20, step: 0.1 })

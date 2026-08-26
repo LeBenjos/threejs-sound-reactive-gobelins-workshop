@@ -7,6 +7,10 @@ export default class CameraRig {
 	constructor(params) {
 		this.params = params
 		this.orbit = { angle: 0, radius: 4.5, baseHeight: 0.95, verticalPhase: 0 }
+		// Framing state written by the Director on each cut.
+		this.lookY = 0
+		this.shotSpeedMult = 1
+		this.shotBobMult = 1
 		this.camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 1000)
 		// Initial pose- update() recomputes from orbit each frame
 		const { angle, radius, baseHeight } = this.orbit
@@ -22,12 +26,12 @@ export default class CameraRig {
 		// Impulses are gated by the passage energy: no whip-pans during quiet
 		// sections. Vertical motion: slow sine bob + energy push. lookAt(0,0,0)
 		// is fixed so the body stays framed.
-		this.orbit.angle += dt * (p.baseSpeed + features.flow * p.kickMult * features.energy)
+		this.orbit.angle += dt * (p.baseSpeed * this.shotSpeedMult + features.flow * p.kickMult * features.energy)
 		this.orbit.verticalPhase += dt * p.verticalSpeed
 		const { angle, radius, baseHeight, verticalPhase } = this.orbit
-		const height = baseHeight + Math.sin(verticalPhase) * p.verticalAmp + features.energy * p.verticalEnergyMult
-		this.camera.position.set(Math.sin(angle) * radius, height, Math.cos(angle) * radius)
-		this.camera.lookAt(0, 0, 0)
+		const bob = (Math.sin(verticalPhase) * p.verticalAmp + features.energy * p.verticalEnergyMult) * this.shotBobMult
+		this.camera.position.set(Math.sin(angle) * radius, baseHeight + bob, Math.cos(angle) * radius)
+		this.camera.lookAt(0, this.lookY, 0)
 	}
 
 	resize() {

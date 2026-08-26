@@ -6,9 +6,8 @@ import { COLOR_PRESETS } from './config.js'
 // Disabling autopilot lets the manual GUI values take over again instantly.
 export default class Autopilot {
 
-	constructor(params, orbit, sky, clouds, body) {
+	constructor(params, sky, clouds, body) {
 		this.params = params
-		this.orbit = orbit
 		this.sky = sky
 		this.clouds = clouds
 		this.body = body
@@ -31,10 +30,8 @@ export default class Autopilot {
 
 		const p = this.params
 
-		// Camera framing- slow orbit-radius breath + height drift + amp sweep.
-		// Different periods avoid Lissajous lock-in; the eye reads it as wandering.
-		this.orbit.radius = 4.8 + osc(32, 0.0) * 1.8
-		this.orbit.baseHeight = 0.6 + osc(27, 1.7) * 1.5
+		// Camera bob amplitude sweep (framing- radius/height- now belongs to the
+		// Director, which hard-cuts between shots).
 		p.camera.verticalAmp = 0.4 + osc01(19, 0.4) * 0.9
 
 		// Sky atmosphere- scale + brightness baseline pulse.

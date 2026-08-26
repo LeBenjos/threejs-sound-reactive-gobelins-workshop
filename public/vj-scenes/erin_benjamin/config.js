@@ -62,6 +62,9 @@ export function createDefaultParams() {
 		// floor is the share of base background speed kept when the music is silent.
 		audio: { quiet: 0.25, loud: 0.75, attack: 0.4, release: 2.0, floor: 0.15 },
 		autopilot: { enabled: true, speed: 0.5, colorCycle: true, preset: 0, switchInterval: PRESET_HOLD_SECONDS },
+		// Director: minShot = anti-strobe hold before a kick may cut; max shot
+		// length interpolates calm→intense with the energy.
+		director: { enabled: true, minShot: 2.0, maxShotCalm: 14, maxShotIntense: 6, cutOnKickHard: true },
 		body: {
 			material: 'rim',
 			bassScale: 0.55,
