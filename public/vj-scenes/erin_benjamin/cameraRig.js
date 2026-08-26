@@ -40,11 +40,14 @@ export default class CameraRig {
 		const t = this.feelTime
 		const roll = Math.sin(t * p.rollSpeed * Math.PI * 2) * p.rollAmp * (0.4 + 0.6 * features.energy)
 		this.camera.rotateZ(roll)
-		const amp = p.shake * features.energy * features.energy
+		// Amplitude follows the tempo too (pace 0..1): a slow track buffets
+		// gently even when loud, a fast one shakes fully.
+		const amp = p.shake * features.energy * features.energy * (0.3 + 0.7 * features.pace)
 		if (amp > 0.0001) {
-			this.camera.position.x += (Math.sin(t * 39.7) + Math.sin(t * 23.3) * 0.6) * amp * 0.5
-			this.camera.position.y += (Math.sin(t * 31.9 + 1.7) + Math.sin(t * 17.3) * 0.6) * amp * 0.5
-			this.camera.position.z += Math.sin(t * 27.1 + 3.1) * amp * 0.4
+			const ts = t * features.rate   // jitter frequency rides the world rate as well
+			this.camera.position.x += (Math.sin(ts * 39.7) + Math.sin(ts * 23.3) * 0.6) * amp * 0.5
+			this.camera.position.y += (Math.sin(ts * 31.9 + 1.7) + Math.sin(ts * 17.3) * 0.6) * amp * 0.5
+			this.camera.position.z += Math.sin(ts * 27.1 + 3.1) * amp * 0.4
 		}
 	}
 

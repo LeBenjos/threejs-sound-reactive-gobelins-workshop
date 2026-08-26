@@ -91,7 +91,7 @@ export function createDefaultParams() {
 		},
 		// shake: wind turbulence amplitude (energy²-gated); rollAmp/rollSpeed:
 		// slow horizon roll- freefall has no up.
-		camera: { baseSpeed: 0.2, kickMult: 2.0, verticalSpeed: 0.26, verticalAmp: 0.85, verticalEnergyMult: 0.5, shake: 0.05, rollAmp: 0.12, rollSpeed: 0.06 },
+		camera: { baseSpeed: 0.2, kickMult: 2.0, verticalSpeed: 0.26, verticalAmp: 0.85, verticalEnergyMult: 0.5, shake: 0.035, rollAmp: 0.12, rollSpeed: 0.06 },
 		sky: {
 			enabled: true,
 			scrollSpeedBase: 0.36,
