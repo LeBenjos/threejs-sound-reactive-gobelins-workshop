@@ -51,23 +51,28 @@ export const COLOR_PRESETS = [
 // autopilot, read every frame by the modules' update() methods.
 export function createDefaultParams() {
 	return {
+		// AudioFeatures calibration: per-band gains compensate the spectral tilt;
+		// quiet/loud bracket the raw spectrum mean (calibrate with the GUI meters);
+		// attack/release are the energy envelope's ramp-up / settle times (seconds).
+		audio: { bassGain: 1.3, midGain: 2.2, highGain: 3.2, quiet: 0.08, loud: 0.35, attack: 0.35, release: 2.0 },
 		autopilot: { enabled: true, speed: 0.5, colorCycle: true, preset: 0, switchInterval: PRESET_HOLD_SECONDS },
 		body: {
 			material: 'normal',
+			bassScale: 0.55,
 			normal: { wireframe: false, flatShading: false },
 			basic: { color: '#ffffff', wireframe: false },
 			wireframe: { color: '#ffffff' },
 			depth: { wireframe: false },
 		},
-		camera: { baseSpeed: 0.2, kickMult: 2.0, verticalSpeed: 0.26, verticalAmp: 0.85, verticalVolumeMult: 0.5 },
+		camera: { baseSpeed: 0.2, kickMult: 2.0, verticalSpeed: 0.26, verticalAmp: 0.85, verticalEnergyMult: 0.5 },
 		sky: {
 			enabled: true,
 			scrollSpeedBase: 0.36,
-			scrollVolumeMult: 0.27,
+			scrollEnergyMult: 0.27,
 			scrollKickMult: 0.7,
 			cloudScale: 8.0,
 			brightnessBase: 0.57,
-			brightnessVolumeMult: 0.6,
+			brightnessEnergyMult: 0.6,
 			topColor: '#6fb4ff',
 			bottomColor: '#bfe1ff',
 			cloudColor: '#ffffff',
@@ -76,14 +81,14 @@ export function createDefaultParams() {
 			enabled: true,
 			count: CLOUD_COUNT_DEFAULT,
 			riseSpeedBase: 1.6,
-			riseVolumeMult: 2.4,
+			riseEnergyMult: 2.4,
 			riseKickMult: 4.0,
 			opacity: 0.85,
 			color: '#ffffff',
 		},
-		bloom: { enabled: true, strengthBase: 0.15, volumeMult: 0.50, kickMult: 1.50, radius: 1.50, threshold: 0.10 },
+		bloom: { enabled: true, strengthBase: 0.15, energyMult: 0.35, kickHardMult: 1.2, radius: 1.50, threshold: 0.10 },
 		afterimage: { enabled: true, dampBase: 0.85, kickHardMult: 0.2 },
-		rgbShift: { enabled: true, kickMult: 0.005, angle: 1.98 },
-		fisheye: { enabled: true, strengthBase: 1.0, volumeMult: 0.2, kickMult: 0.65, kickHardMult: 1.46 },
+		rgbShift: { enabled: true, highMult: 0.006, angle: 1.98 },
+		fisheye: { enabled: true, strengthBase: 1.0, energyMult: 0.45, kickHardMult: 0.8 },
 	}
 }

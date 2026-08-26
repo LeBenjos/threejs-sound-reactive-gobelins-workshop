@@ -14,16 +14,17 @@ export default class CameraRig {
 		this.camera.lookAt(0, 0, 0)
 	}
 
-	update(dt, audio) {
+	update(dt, audio, features) {
 		const p = this.params.camera
 		// Integrating into angular *velocity* (not angle directly) keeps motion
 		// smooth: audio.kick spikes then decays, so each beat reads as an accelerator
-		// rather than a teleport. Vertical motion: slow sine bob + volume push.
-		// lookAt(0,0,0) is fixed so the body stays framed as the cam rises/falls.
-		this.orbit.angle += dt * (p.baseSpeed + audio.kick * p.kickMult)
+		// rather than a teleport. Kick impulses are gated by the passage energy-
+		// no whip-pans during quiet sections. Vertical motion: slow sine bob +
+		// energy push. lookAt(0,0,0) is fixed so the body stays framed.
+		this.orbit.angle += dt * (p.baseSpeed + audio.kick * p.kickMult * features.energy)
 		this.orbit.verticalPhase += dt * p.verticalSpeed
 		const { angle, radius, baseHeight, verticalPhase } = this.orbit
-		const height = baseHeight + Math.sin(verticalPhase) * p.verticalAmp + audio.volumeSmooth * p.verticalVolumeMult
+		const height = baseHeight + Math.sin(verticalPhase) * p.verticalAmp + features.energy * p.verticalEnergyMult
 		this.camera.position.set(Math.sin(angle) * radius, height, Math.cos(angle) * radius)
 		this.camera.lookAt(0, 0, 0)
 	}

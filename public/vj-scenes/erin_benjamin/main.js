@@ -5,6 +5,10 @@ import ErinBenjaminScene from './scene.js'
 const audio = new Analyzer()
 const scene = new ErinBenjaminScene(audio)
 
+// Console access while iterating (harmless in the host- just two globals in our iframe).
+window.vjAudio = audio
+window.vjScene = scene
+
 const PREFERRED_TRACK = /tame/i
 
 // Redirect the SoundPlayer's first useTrack() call to our preferred track,

@@ -31,16 +31,17 @@ export default class Sky {
 		return this.mesh.material.uniforms
 	}
 
-	update(dt, audio) {
+	update(dt, audio, features) {
 		const p = this.params.sky
 		this.mesh.visible = p.enabled
 		// Integrate speed·dt (not raw clock time) so kick spikes register as
-		// transient accelerators, mirroring the camera-orbit pattern.
-		this.time += dt * (p.scrollSpeedBase + audio.volumeSmooth * p.scrollVolumeMult + audio.kick * p.scrollKickMult)
+		// transient accelerators, mirroring the camera-orbit pattern. The fall
+		// speed follows the passage energy: intense music = faster fall.
+		this.time += dt * (p.scrollSpeedBase + features.energy * p.scrollEnergyMult + audio.kick * p.scrollKickMult * features.energy)
 		const u = this.uniforms
 		u.time.value = this.time
 		u.cloudScale.value = p.cloudScale
-		u.brightness.value = p.brightnessBase + audio.volumeSmooth * p.brightnessVolumeMult
+		u.brightness.value = p.brightnessBase + features.energy * p.brightnessEnergyMult
 	}
 
 	// Lerp the sky uniforms between two color presets at factor f (0=A, 1=B).

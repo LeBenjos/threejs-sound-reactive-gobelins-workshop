@@ -63,20 +63,25 @@ export default class PostFX {
 		this.composer.render()
 	}
 
-	update(audio) {
+	update(audio, features) {
 		const p = this.params
+		const e = features.energy
+		// One driver per effect, every punctual reaction gated by the passage
+		// energy: bloom swells with intensity and flares on the strong beats only,
+		// RGB shift follows the highs (hats/cymbals), the fisheye breathes with
+		// the energy and only kickHard still punches it.
 		// bloomPass lives in bloomComposer- merge pass gates the visual on/off.
-		this.bloomPass.strength = p.bloom.strengthBase + audio.volume * p.bloom.volumeMult + audio.kick * p.bloom.kickMult
+		this.bloomPass.strength = p.bloom.strengthBase + e * p.bloom.energyMult + audio.kickHard * p.bloom.kickHardMult * e
 		this.bloomPass.radius = p.bloom.radius
 		this.bloomPass.threshold = p.bloom.threshold
 		this.bloomMergePass.enabled = p.bloom.enabled
 		this.afterimagePass.enabled = p.afterimage.enabled
-		this.afterimagePass.uniforms.damp.value = Math.min(0.96, p.afterimage.dampBase + audio.kickHard * p.afterimage.kickHardMult)
+		this.afterimagePass.uniforms.damp.value = Math.min(0.96, p.afterimage.dampBase + audio.kickHard * p.afterimage.kickHardMult * e)
 		this.rgbShiftPass.enabled = p.rgbShift.enabled
-		this.rgbShiftPass.uniforms.amount.value = audio.kick * p.rgbShift.kickMult
+		this.rgbShiftPass.uniforms.amount.value = features.high * p.rgbShift.highMult
 		this.rgbShiftPass.uniforms.angle.value = p.rgbShift.angle
 		this.fisheyePass.enabled = p.fisheye.enabled
-		this.fisheyePass.uniforms.strength.value = p.fisheye.strengthBase + audio.volume * p.fisheye.volumeMult + audio.kick * p.fisheye.kickMult + audio.kickHard * p.fisheye.kickHardMult
+		this.fisheyePass.uniforms.strength.value = p.fisheye.strengthBase + e * p.fisheye.energyMult + audio.kickHard * p.fisheye.kickHardMult * e
 	}
 
 	render(dt) {

@@ -72,15 +72,15 @@ export default class Clouds {
 		for (const cloud of this.group.children) cloud.material.uniforms.cloudColor.value.copy(mixed)
 	}
 
-	update(dt, audio, camera) {
+	update(dt, audio, features, camera) {
 		const p = this.params.clouds
 		this.group.visible = p.enabled
 		if (!p.enabled) return
 		// World-space rise scaled by per-layer speedMult: near layers run faster
 		// than far ones, multiplying the natural perspective parallax into a true
 		// layered effect. Each cloud recycles within its own band so layers stay
-		// visually coherent over time.
-		const baseRise = p.riseSpeedBase + audio.volumeSmooth * p.riseVolumeMult + audio.kick * p.riseKickMult
+		// visually coherent over time. Rise speed follows the passage energy.
+		const baseRise = p.riseSpeedBase + features.energy * p.riseEnergyMult + audio.kick * p.riseKickMult * features.energy
 		const baseDy = dt * baseRise
 		for (const cloud of this.group.children) {
 			const layer = CLOUD_LAYERS[cloud.userData.layerIndex]

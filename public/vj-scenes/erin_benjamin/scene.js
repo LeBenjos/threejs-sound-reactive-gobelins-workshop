@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 
+import AudioFeatures from './audioFeatures.js'
 import Autopilot from './autopilot.js'
 import Body from './body.js'
 import CameraRig from './cameraRig.js'
@@ -16,6 +17,7 @@ export default class ErinBenjaminScene {
 	constructor(audio) {
 		this.audio = audio
 		this.params = createDefaultParams()
+		this.features = new AudioFeatures(this.params)
 		this.body = new Body(this.params)
 		this.renderer = null
 		this.scene = null
@@ -74,16 +76,19 @@ export default class ErinBenjaminScene {
 		const a = this.audio // volume · volumeSmooth · kick · kickHard · volumeByFrequency
 		const dt = this.clock.getDelta()
 
+		// Derived signals first- everything below reads them.
+		this.features.update(dt, a)
 		this.body.update(dt)
 
-		// Autopilot first- mutates params so the audio-reactive logic below adds on top.
+		// Autopilot next- mutates params so the audio-reactive logic below adds on top.
 		if (this.params.autopilot.enabled) this.autopilot.update(dt)
 
-		this.pivot.scale.setScalar(1 + a.volume * 0.4 + a.kick * 0.25)
-		this.cameraRig.update(dt, a)
-		this.sky.update(dt, a)
-		this.clouds.update(dt, a, this.cameraRig.camera)
-		this.postfx.update(a)
+		// The body breathes with the bass.
+		this.pivot.scale.setScalar(1 + this.features.bass * this.params.body.bassScale)
+		this.cameraRig.update(dt, a, this.features)
+		this.sky.update(dt, a, this.features)
+		this.clouds.update(dt, a, this.features, this.cameraRig.camera)
+		this.postfx.update(a, this.features)
 		this.postfx.render(dt)
 	}
 
