@@ -71,9 +71,11 @@ export default class Director {
 		this.state.shot = next.name
 		this.shotTime = 0
 
-		// Hard cut: reframe instantly + jump to a fresh viewpoint.
+		// Hard cut: reframe instantly + jump to a fresh viewpoint, and re-roll
+		// the orbit direction so the camera doesn't always circle the same way.
 		const r = this.rig.orbit
 		r.angle += rand(1.2, 2.5) * (Math.random() < 0.5 ? -1 : 1)
+		this.rig.orbitDir = Math.random() < 0.5 ? -1 : 1
 		r.radius = next.dolly ? next.radius[0] : rand(next.radius[0], next.radius[1])
 		r.baseHeight = rand(next.height[0], next.height[1])
 		this.rig.lookY = next.lookY
