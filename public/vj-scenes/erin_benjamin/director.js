@@ -11,8 +11,7 @@ const ACCENT_SHOTS = [
 	// calm/intense: rarity weights blended by energy (higher = more frequent).
 	// far: the body becomes a small figure lost in the sky.
 	{ name: 'far', radius: [9, 15], height: [1.0, 3.5], lookY: 0, speedMult: 0.7, bobMult: 1.6, calm: 3, intense: 2 },
-	{ name: 'closeup', radius: [1.7, 2.4], height: [0.2, 0.7], lookY: 0.35, speedMult: 0.6, bobMult: 0.25, calm: 2, intense: 3 },
-	{ name: 'lowAngle', radius: [2.5, 3.5], height: [-2.2, -1.2], lookY: 0.2, speedMult: 0.8, bobMult: 0.4, calm: 1, intense: 2 },
+	{ name: 'lowAngle', radius: [2.5, 3.5], height: [-2.2, -1.2], lookY: 0.2, speedMult: 0.8, bobMult: 0.4, calm: 1, intense: 2.5 },
 	{ name: 'topDown', radius: [1.2, 2.0], height: [2.6, 3.4], lookY: -0.3, speedMult: 0.9, bobMult: 0.3, calm: 1, intense: 2 },
 	// dolly: radius glides from radius[0] toward radius[1] over the accent.
 	{ name: 'dolly', radius: [6.5, 2.5], height: [0.4, 0.9], lookY: 0.1, speedMult: 0.35, bobMult: 0.5, dolly: true, calm: 2, intense: 1 },
