@@ -16,10 +16,10 @@ const FADE = 0.35   // crossfade duration between animations (seconds)
 // limbMix/(1+limbMix)): the body still fully rotates, but arms and legs keep
 // flailing- an involuntary tumble instead of a deliberate gymnast tuck.
 const EVENT_TUNING = {
-	backflip: { fade: 0.6, startAt: 0.15, timeScale: 0.7, limbMix: 1.2 },
+	backflip: { fade: 0.6, startAt: 0.15, timeScale: 0.7, limbMix: 2.0 },
 	// Same treatment for the soar: slow blend + some flail bleeding through
 	// (lighter mix- the glide pose must stay readable).
-	flying: { fade: 0.6, limbMix: 0.8 },
+	flying: { fade: 0.6, limbMix: 1.4 },
 }
 const LIMB_RE = /Arm|Hand|Shoulder|Leg|Foot|Toe/i   // everything but Hips/Spine/Neck/Head
 
