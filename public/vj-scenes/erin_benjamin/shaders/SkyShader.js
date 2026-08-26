@@ -7,6 +7,7 @@ export default {
 	uniforms: {
 		time: { value: 0 },
 		cloudScale: { value: 3.0 },
+		coverageShift: { value: 0 },   // raises the FBM threshold- sparser clouds at high energy
 		brightness: { value: 0.95 },
 		resolution: { value: new THREE.Vector2(1, 1) },
 		skyTop: { value: new THREE.Color(0x6fb4ff) },
@@ -23,6 +24,7 @@ export default {
 	fragmentShader: /* glsl */`
 		uniform float time;
 		uniform float cloudScale;
+		uniform float coverageShift;
 		uniform float brightness;
 		uniform vec2 resolution;
 		uniform vec3 skyTop;
@@ -63,7 +65,10 @@ export default {
 
 			vec3 sky = mix( skyBottom, skyTop, vUv.y );
 			float n = fbm( uv * cloudScale );
-			float clouds = smoothstep( 0.45, 0.75, n );
+			// coverageShift raises the window at high energy: only the dense FBM
+			// cores survive, so the sky gradient stays visible behind the speed
+			// streaks instead of drowning under a full-frame noise wall.
+			float clouds = smoothstep( 0.45 + coverageShift, 0.75 + coverageShift, n );
 			vec3 col = mix( sky, cloudColor * brightness, clouds );
 			gl_FragColor = vec4( col, 1.0 );
 		}

@@ -44,7 +44,12 @@ export default class Sky {
 		const u = this.uniforms
 		u.time.value = this.time
 		u.cloudScale.value = p.cloudScale
-		u.brightness.value = p.brightnessBase + features.energy * p.brightnessEnergyMult
+		// Clamped at white: past 1.0 the cloud tint burns the whole frame out and
+		// the sky gradient disappears- the "wall of white" during intense passages.
+		u.brightness.value = Math.min(1, p.brightnessBase + features.energy * p.brightnessEnergyMult)
+		// Intense passages thin the cloud cover (see SkyShader): speed reads
+		// through fewer, denser clouds- not through more noise.
+		u.coverageShift.value = features.energy * 0.17
 	}
 
 	// Lerp the sky uniforms between two color presets at factor f (0=A, 1=B).
