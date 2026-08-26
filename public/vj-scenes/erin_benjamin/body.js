@@ -98,12 +98,22 @@ export default class Body {
 			for (const [name, clip] of Object.entries(this.clips)) {
 				this.actions[name] = this.mixer.clipAction(clip)
 			}
-			// Derived clip: the falling's limb tracks alone- layered over the
-			// backflip so the tumble keeps the helpless flailing (see EVENT_TUNING).
-			const limbTracks = this.clips.falling.tracks.filter((t) => LIMB_RE.test(t.name))
+			// Derived clips from the falling loop:
+			// - fallingLimbs: limb tracks alone, layered over the backflip so the
+			//   tumble keeps the helpless flailing (see EVENT_TUNING)
+			// - fallingHips: the hips POSITION track alone, layered during every
+			//   event- the event clips are rotation-only, so without it the hips
+			//   drift toward the rest height as the falling action fades out
+			const falling = this.clips.falling
+			const limbTracks = falling.tracks.filter((t) => LIMB_RE.test(t.name))
 			if (limbTracks.length) {
 				this.actions.fallingLimbs = this.mixer.clipAction(
-					new THREE.AnimationClip('fallingLimbs', this.clips.falling.duration, limbTracks))
+					new THREE.AnimationClip('fallingLimbs', falling.duration, limbTracks))
+			}
+			const hipsTracks = falling.tracks.filter((t) => /Hips/i.test(t.name) && t.name.endsWith('.position'))
+			if (hipsTracks.length) {
+				this.actions.fallingHips = this.mixer.clipAction(
+					new THREE.AnimationClip('fallingHips', falling.duration, hipsTracks))
 			}
 			// backflip is a one-shot: clamp on the last frame while fading back
 			// (the 'finished' listener below triggers the return to falling).
@@ -112,10 +122,7 @@ export default class Body {
 				this.actions.backflip.clampWhenFinished = true
 			}
 			this.mixer.addEventListener('finished', (e) => {
-				if (e.action === this.actions.backflip) {
-					this.fadeTo('falling', EVENT_TUNING.backflip.fade)
-					this.actions.fallingLimbs?.fadeOut(EVENT_TUNING.backflip.fade)
-				}
+				if (e.action === this.actions.backflip) this.endEvent(EVENT_TUNING.backflip.fade)
 			})
 			this.actions.falling.play()
 			this.currentAction = this.actions.falling
@@ -128,17 +135,30 @@ export default class Body {
 	playEvent(name, hold = 0) {
 		if (!this.actions[name] || this.currentAction !== this.actions.falling) return false
 		const tuning = EVENT_TUNING[name]
-		const fallingTime = this.actions.falling.time   // for limb-layer continuity
-		this.fadeTo(name, tuning?.fade ?? FADE, tuning?.startAt ?? 0, tuning?.timeScale ?? 1)
-		// Layer the flailing limbs over the flip, in phase with where the
-		// falling loop just was so the limbs don't pop at the blend start.
-		const aux = this.actions.fallingLimbs
-		if (tuning?.limbMix && aux) {
-			aux.reset().setEffectiveTimeScale(1).setEffectiveWeight(tuning.limbMix).fadeIn(tuning.fade).play()
-			aux.time = fallingTime
-		}
+		const fade = tuning?.fade ?? FADE
+		const fallingTime = this.actions.falling.time   // for aux-layer continuity
+		this.fadeTo(name, fade, tuning?.startAt ?? 0, tuning?.timeScale ?? 1)
+		// Aux layers, in phase with where the falling loop just was so nothing
+		// pops at the blend start: the hips position always (event clips are
+		// rotation-only- he must stay at falling height), the flailing limbs
+		// only where the tuning asks for them.
+		this.startAux(this.actions.fallingHips, 1, fade, fallingTime)
+		if (tuning?.limbMix) this.startAux(this.actions.fallingLimbs, tuning.limbMix, fade, fallingTime)
 		this.eventTimer = hold
 		return true
+	}
+
+	startAux(action, weight, fade, time) {
+		if (!action) return
+		action.reset().setEffectiveTimeScale(1).setEffectiveWeight(weight).fadeIn(fade).play()
+		action.time = time
+	}
+
+	// An event is over: back to the base fall, aux layers out with it.
+	endEvent(fade = FADE) {
+		this.fadeTo('falling', fade)
+		this.actions.fallingHips?.fadeOut(fade)
+		this.actions.fallingLimbs?.fadeOut(fade)
 	}
 
 	fadeTo(name, duration = FADE, startAt = 0, timeScale = 1) {
@@ -155,7 +175,7 @@ export default class Body {
 		// Held event (flying) running out → glide back to the base fall.
 		if (this.eventTimer > 0) {
 			this.eventTimer -= dt
-			if (this.eventTimer <= 0) this.fadeTo('falling')
+			if (this.eventTimer <= 0) this.endEvent()
 		}
 		// Rim material: the contour glow pulses on the strong beats (energy-gated,
 		// like the other flash effects), and the fixed world light is rotated into
