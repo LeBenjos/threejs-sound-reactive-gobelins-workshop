@@ -65,7 +65,8 @@ export function createDefaultParams() {
 		// Director: minShot = anti-strobe hold before a kick may cut; max shot
 		// length interpolates calm→intense with the energy; kickCutChance keeps
 		// beat cuts occasional instead of mechanical.
-		director: { enabled: true, minShot: 4.0, maxShotCalm: 14, maxShotIntense: 8, cutOnKickHard: true, kickCutChance: 0.5 },
+		// zoomDrift: chance a shot slowly zooms during its run (half in, half out).
+		director: { enabled: true, minShot: 4.0, maxShotCalm: 14, maxShotIntense: 8, cutOnKickHard: true, kickCutChance: 0.5, zoomDrift: 0.7 },
 		body: {
 			material: 'rim',
 			bassScale: 0.55,

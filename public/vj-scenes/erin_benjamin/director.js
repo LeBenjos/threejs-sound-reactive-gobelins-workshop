@@ -25,6 +25,13 @@ const SHOTS = [
 ]
 
 const rand = (min, max) => min + Math.random() * (max - min)
+const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
+
+// Closest the zoom drift may come, per shot kind- outside the body even with
+// arms spread and the bass scale pulse (~1.55x on a ~1 unit half arm-span).
+const ORBIT_MIN_RADIUS = 1.6
+const TRACK_MIN_DIST = { face: 0.55, hand: 0.35, below: 1.6 }
+const ORBIT_MAX_RADIUS = 20
 
 export default class Director {
 
@@ -59,6 +66,31 @@ export default class Director {
 			const r = this.rig.orbit
 			r.radius += (this.shot.radius[1] - r.radius) * (1 - Math.exp(-dt / this.dollyTau))
 		}
+
+		// Random per-shot zoom drift (in / out / none, rolled at cut time).
+		if (this.drift) {
+			const k = 1 - Math.exp(-dt / this.drift.tau)
+			if (this.rig.trackShot) this.rig.trackShot.dist += (this.drift.target - this.rig.trackShot.dist) * k
+			else this.rig.orbit.radius += (this.drift.target - this.rig.orbit.radius) * k
+		}
+	}
+
+	// Roll the zoom drift for the shot that was just cut to: zoom in, zoom out
+	// or hold, gliding toward a clamped target so the lens never enters the body.
+	rollDrift(next) {
+		this.drift = null
+		if (next.dolly) return   // the dolly IS a zoom- don't stack another one
+		const roll = Math.random()
+		if (roll >= this.params.director.zoomDrift) return
+		const dir = roll < this.params.director.zoomDrift * 0.5 ? -1 : 1
+		const tau = rand(5, 10)
+		if (next.track) {
+			const base = this.rig.trackShot.dist
+			this.drift = { tau, target: clamp(base * (1 + dir * rand(0.3, 0.6)), TRACK_MIN_DIST[next.track], base * 1.8) }
+		} else {
+			const base = this.rig.orbit.radius
+			this.drift = { tau, target: clamp(base * (1 + dir * rand(0.25, 0.55)), ORBIT_MIN_RADIUS, ORBIT_MAX_RADIUS) }
+		}
 	}
 
 	cut(energy) {
@@ -88,6 +120,7 @@ export default class Director {
 				side: rand(-1, 1), side2: rand(-1, 1),
 				fresh: true,
 			}
+			this.rollDrift(next)
 			return
 		}
 		this.rig.trackShot = null
@@ -103,6 +136,7 @@ export default class Director {
 		this.rig.shotSpeedMult = next.speedMult
 		this.rig.shotBobMult = next.bobMult
 		if (next.dolly) this.dollyTau = rand(3, 6)   // seconds to close most of the distance
+		this.rollDrift(next)
 	}
 
 }
