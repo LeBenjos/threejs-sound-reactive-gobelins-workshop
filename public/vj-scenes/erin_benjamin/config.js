@@ -65,7 +65,7 @@ export function createDefaultParams() {
 		body: {
 			material: 'rim',
 			bassScale: 0.55,
-			rim: { baseColor: '#0b0b14', power: 2.5, strength: 1.2, kickHardMult: 1.5 },
+			rim: { baseColor: '#d5d5dd', power: 3.0, strength: 1.4, kickHardMult: 1.5 },
 			normal: { wireframe: false, flatShading: false },
 			basic: { color: '#ffffff', wireframe: false },
 			wireframe: { color: '#ffffff' },
@@ -93,7 +93,10 @@ export function createDefaultParams() {
 			opacity: 0.85,
 			color: '#ffffff',
 		},
-		bloom: { enabled: true, strengthBase: 0.15, energyMult: 0.35, kickHardMult: 2.2, radius: 1.50, threshold: 0.10 },
+		// threshold must stay ABOVE the white body's max luminance (~0.70 with the
+		// #d5d5dd base): only the rim-boosted edges cross it, so the bloom halos
+		// the contour instead of flaring the whole body.
+		bloom: { enabled: true, strengthBase: 0.15, energyMult: 0.35, kickHardMult: 2.2, radius: 1.50, threshold: 0.85 },
 		afterimage: { enabled: true, dampBase: 0.85, kickHardMult: 0.2 },
 		rgbShift: { enabled: true, highMult: 0.006, angle: 1.98 },
 		fisheye: { enabled: true, strengthBase: 1.0, energyMult: 0.45, kickHardMult: 1.3 },

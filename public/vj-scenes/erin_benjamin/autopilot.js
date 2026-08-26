@@ -44,9 +44,11 @@ export default class Autopilot {
 		// Cloud field veil density.
 		p.clouds.opacity = 0.75 + osc(14, 1.1) * 0.2
 
-		// Lens dynamics- bloom shape + lens distortion + RGB rotation.
+		// Lens dynamics- bloom shape + lens distortion + RGB rotation. The bloom
+		// threshold must stay ABOVE the white body's ~0.70 max luminance (see
+		// config) so only the rim-boosted edges ever bloom.
 		p.bloom.radius = 0.35 + osc(18, 0.6) * 0.2
-		p.bloom.threshold = 0.15 + osc01(24, 0.9) * 0.15
+		p.bloom.threshold = 0.8 + osc01(24, 0.9) * 0.15
 		p.fisheye.strengthBase = 0.6 + osc(28, 2.4) * 0.6
 		p.rgbShift.angle = (phase * 0.4) % (Math.PI * 2)
 
