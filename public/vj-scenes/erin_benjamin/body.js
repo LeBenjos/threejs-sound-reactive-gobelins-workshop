@@ -16,7 +16,9 @@ const FADE = 0.35   // crossfade duration between animations (seconds)
 // limbMix/(1+limbMix)): the body still fully rotates, but arms and legs keep
 // flailing- an involuntary tumble instead of a deliberate gymnast tuck.
 const EVENT_TUNING = {
-	backflip: { fade: 0.6, startAt: 0.15, timeScale: 0.23, limbMix: 2.0 },
+	// endAt cuts the clip before its grounded landing recovery (a pose far from
+	// falling- blending from it read as a jolt); returnFade glides back long.
+	backflip: { fade: 0.6, startAt: 0.15, endAt: 0.75, timeScale: 0.23, limbMix: 2.0, returnFade: 1.2 },
 	// Same treatment for the soar: slow blend + some flail bleeding through
 	// (lighter mix- the glide pose must stay readable).
 	flying: { fade: 0.6, limbMix: 1.4 },
@@ -153,7 +155,8 @@ export default class Body {
 		this.startAux(this.actions.fallingHips, 1, fade, fallingTime)
 		if (tuning?.limbMix) this.startAux(this.actions.fallingLimbs, tuning.limbMix, fade, fallingTime)
 		this.eventTimer = hold
-		this.eventFade = fade   // the timer-based return (flying) mirrors the entry fade
+		this.eventName = name
+		this.eventFade = tuning?.returnFade ?? fade   // used by the timer/endAt returns
 		return true
 	}
 
@@ -165,6 +168,7 @@ export default class Body {
 
 	// An event is over: back to the base fall, aux layers out with it.
 	endEvent(fade = FADE) {
+		this.eventName = null
 		this.fadeTo('falling', fade)
 		this.actions.fallingHips?.fadeOut(fade)
 		this.actions.fallingLimbs?.fadeOut(fade)
@@ -185,6 +189,12 @@ export default class Body {
 		if (this.eventTimer > 0) {
 			this.eventTimer -= dt
 			if (this.eventTimer <= 0) this.endEvent(this.eventFade)
+		}
+		// endAt: leave a one-shot event BEFORE its final pose (the backflip's
+		// grounded landing)- the return blend starts from a mid-air pose instead.
+		const tuning = EVENT_TUNING[this.eventName]
+		if (tuning?.endAt && this.currentAction === this.actions[this.eventName] && this.currentAction.time >= tuning.endAt) {
+			this.endEvent(this.eventFade)
 		}
 		// Rim material: the contour glow pulses on the strong beats (energy-gated,
 		// like the other flash effects), and the fixed world light is rotated into
