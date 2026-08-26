@@ -17,10 +17,6 @@ export default class Clouds {
 		this.mixScratch = new THREE.Color()      // reused per-frame by lerpColors to avoid GC
 		this.shadowScratch = new THREE.Color()   // same, for the sprites' underside tint
 		this.churn = 0   // internal-billow clock- advances with the energy (see update)
-		// Orbital follow state: the field tracks HALF the camera's azimuth sweep
-		// (see update)- prevAzimuth is null until the first frame.
-		this.followAngle = 0
-		this.prevAzimuth = null
 		this.populate()
 	}
 
@@ -105,19 +101,6 @@ export default class Clouds {
 		// clouds' own world rise- and the band stays centered on the camera at
 		// any shot height. Horizontal parallax (orbit, dolly) is untouched.
 		this.group.position.y = camera.position.y
-		// The field also follows HALF the camera's orbital sweep (wind-like
-		// circulation). On tilted shots the orbit projects as screen-space arcs-
-		// clouds rising on one side of the frame, falling on the other- which
-		// breaks the "everything rises" reading; halving the relative angular
-		// speed halves those arcs while keeping the horizontal parallax alive.
-		const az = Math.atan2(camera.position.x, camera.position.z)
-		if (this.prevAzimuth === null) this.prevAzimuth = az
-		let dAz = az - this.prevAzimuth
-		if (dAz > Math.PI) dAz -= Math.PI * 2
-		else if (dAz < -Math.PI) dAz += Math.PI * 2
-		this.prevAzimuth = az
-		this.followAngle += dAz * 0.5
-		this.group.rotation.y = this.followAngle
 		// World-space rise scaled by per-layer speedMult: near layers run faster
 		// than far ones, multiplying the natural perspective parallax into a true
 		// layered effect. Each cloud recycles within its own band so layers stay
@@ -153,21 +136,12 @@ export default class Clouds {
 		this.billboard(camera)
 	}
 
-	// Cylindrical billboard: rotate only around world Y to face camera. Keeps clouds
-	// upright (no roll) even when the camera bobs, which matches "real" cloud sprites.
-	// The group carries a Y rotation (orbital follow), so local positions are rotated
-	// to world before aiming, and the group rotation is subtracted from the yaw.
+	// Billboard: each quad faces the camera in yaw AND pitch (lookAt with the
+	// default world-up), so clouds stay visible from the top-down and low-angle
+	// shots too- the previous yaw-only cylinder showed them edge-on from
+	// above/below. World-up roll keeps them from spinning when the camera bobs.
 	billboard(camera) {
-		const cx = camera.position.x
-		const cz = camera.position.z
-		const R = this.group.rotation.y
-		const cosR = Math.cos(R)
-		const sinR = Math.sin(R)
-		for (const cloud of this.group.children) {
-			const wx = cosR * cloud.position.x + sinR * cloud.position.z
-			const wz = -sinR * cloud.position.x + cosR * cloud.position.z
-			cloud.rotation.y = Math.atan2(cx - wx, cz - wz) - R
-		}
+		for (const cloud of this.group.children) cloud.lookAt(camera.position)
 	}
 
 }

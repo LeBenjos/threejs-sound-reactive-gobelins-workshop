@@ -10,6 +10,10 @@ export default class Sky {
 		this.params = params
 		this.time = 0
 		this.churn = 0   // warp clock- cumulus shapes boil, faster with the energy
+		// Orbital pan state: the FBM background pans with the camera azimuth so
+		// it moves as one world with the 3D sprites (see update).
+		this.pan = 0
+		this.prevAzimuth = null
 		const geometry = new THREE.PlaneGeometry(2, 2)
 		const material = new THREE.ShaderMaterial({
 			uniforms: THREE.UniformsUtils.clone(SkyShader.uniforms),
@@ -32,7 +36,7 @@ export default class Sky {
 		return this.mesh.material.uniforms
 	}
 
-	update(dt, audio, features) {
+	update(dt, audio, features, camera) {
 		const p = this.params.sky
 		this.mesh.visible = p.enabled
 		// Integrate speed·dt (not raw clock time) so kick spikes register as
@@ -43,8 +47,22 @@ export default class Sky {
 		const base = p.scrollSpeedBase * (floor + (1 - floor) * features.energy)
 		this.time += dt * (base + features.energy * p.scrollEnergyMult + features.flow * p.scrollKickMult * features.energy)
 		this.churn += dt * (0.05 + features.energy * 0.25)
+		// The background pans with the camera's orbital sweep, calibrated on the
+		// horizontal FOV (a sweep of one FOV pans one screen width): the FBM and
+		// the 3D sprites read as ONE world when the camera orbits or whip-pans.
+		// The azimuth is unwrapped so the ±π seam never jumps the pattern; hard
+		// cuts do jump it, masked by the cut itself.
+		const az = Math.atan2(camera.position.x, camera.position.z)
+		if (this.prevAzimuth === null) this.prevAzimuth = az
+		let dAz = az - this.prevAzimuth
+		if (dAz > Math.PI) dAz -= Math.PI * 2
+		else if (dAz < -Math.PI) dAz += Math.PI * 2
+		this.prevAzimuth = az
+		const hFov = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect)
+		this.pan -= dAz * (camera.aspect / hFov)
 		const u = this.uniforms
 		u.time.value = this.time
+		u.panX.value = this.pan
 		u.churnTime.value = this.churn
 		u.cloudScale.value = p.cloudScale
 		// Clamped at white: past 1.0 the cloud tint burns the whole frame out and

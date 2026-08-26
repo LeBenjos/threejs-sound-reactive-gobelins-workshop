@@ -90,7 +90,7 @@ export default class ErinBenjaminScene {
 		this.pivot.scale.setScalar(1 + this.features.bass * this.params.body.bassScale)
 		this.director.update(dt, a, this.features)
 		this.cameraRig.update(dt, a, this.features)
-		this.sky.update(dt, a, this.features)
+		this.sky.update(dt, a, this.features, this.cameraRig.camera)
 		this.clouds.update(dt, a, this.features, this.cameraRig.camera)
 		this.postfx.update(a, this.features)
 		this.postfx.render(dt)

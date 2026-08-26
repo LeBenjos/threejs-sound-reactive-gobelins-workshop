@@ -6,6 +6,7 @@ import * as THREE from 'three'
 export default {
 	uniforms: {
 		time: { value: 0 },
+		panX: { value: 0 },            // horizontal world-pan- follows the camera azimuth (sky.js)
 		churnTime: { value: 0 },       // warp clock- shapes boil slowly, energy-driven (sky.js)
 		cloudScale: { value: 3.0 },
 		coverageShift: { value: 0 },   // raises the FBM threshold- sparser clouds at high energy
@@ -24,6 +25,7 @@ export default {
 	`,
 	fragmentShader: /* glsl */`
 		uniform float time;
+		uniform float panX;
 		uniform float churnTime;
 		uniform float cloudScale;
 		uniform float coverageShift;
@@ -63,6 +65,10 @@ export default {
 			// rows over time, which reads as upward motion.
 			vec2 uv = vUv;
 			uv.x *= resolution.x / resolution.y;
+			// panX couples the background to the camera's orbital sweep (set in
+			// sky.js), so the FBM pans WITH the 3D sprites instead of sitting
+			// frozen behind their arcs. The vertical scroll stays the fall.
+			uv.x += panX;
 			uv.y -= time;
 
 			vec3 sky = mix( skyBottom, skyTop, vUv.y );

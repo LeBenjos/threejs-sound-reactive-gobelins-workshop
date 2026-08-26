@@ -121,7 +121,10 @@ export default class Body {
 		const u = this.mat?.uniforms
 		if (!u?.rimColor) return
 		u.rimColor.value.copy(A.bodyRim).lerp(B.bodyRim, f)
-		u.ambientColor.value.copy(A.skyTop).lerp(B.skyTop, f)
+		// Saturation boost: skyTop values are airy pastels- multiplied over a
+		// white body they read as barely-there. Recomputed from the presets
+		// every frame, so the offset never accumulates.
+		u.ambientColor.value.copy(A.skyTop).lerp(B.skyTop, f).offsetHSL(0, 0.25, 0)
 	}
 
 	normalize() {
@@ -202,7 +205,7 @@ export default class Body {
 				const preset = COLOR_PRESETS[this.params.autopilot.preset]
 				if (preset) {
 					mat.uniforms.rimColor.value.copy(preset.bodyRim)
-					mat.uniforms.ambientColor.value.copy(preset.skyTop)
+					mat.uniforms.ambientColor.value.copy(preset.skyTop).offsetHSL(0, 0.25, 0)   // same boost as lerpColors
 				}
 				return mat
 			}
