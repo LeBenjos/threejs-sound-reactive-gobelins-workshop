@@ -71,7 +71,10 @@ export default class Gui {
 		auto.addBinding(params.autopilot, 'enabled')
 		auto.addBinding(params.autopilot, 'speed', { min: 0, max: 3, step: 0.01 })
 		auto.addBinding(params.autopilot, 'colorCycle', { label: 'couleurs sur les drops' })
-		auto.addBinding(params.autopilot, 'dropSnap', { label: 'drop = coupure sèche' })
+		auto.addBinding(params.autopilot, 'dropMode', {
+			label: 'transition drop',
+			options: { 'aléatoire': 'random', 'coupure': 'snap', 'glissé': 'surge', 'flash blanc': 'flash', 'par beats': 'steps' },
+		})
 		// Manual preset selector- overridden live when colorCycle is on (the cycle
 		// keeps writing into the uniforms each frame).
 		const presetOptions = Object.fromEntries(COLOR_PRESETS.map((pst, i) => [pst.name, i]))

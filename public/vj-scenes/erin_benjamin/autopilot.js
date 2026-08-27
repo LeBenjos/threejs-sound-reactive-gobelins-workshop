@@ -1,4 +1,14 @@
+import * as THREE from 'three'
+
 import { COLOR_PRESETS } from './config.js'
+
+// Waypoint for the 'flash' transition: everything blows out to white before
+// the next palette reveals itself.
+const WHITE_PRESET = {
+	skyTop: new THREE.Color(0xffffff), skyBottom: new THREE.Color(0xffffff),
+	skyCloudColor: new THREE.Color(0xffffff), cloudsColor: new THREE.Color(0xffffff),
+	bodyRim: new THREE.Color(0xffffff),
+}
 
 // Layered LFOs over the static-feeling params. Writes go directly into the params
 // struct (and into the sky/clouds colors), so the audio-reactive update() logic
@@ -12,33 +22,58 @@ export default class Autopilot {
 		this.clouds = clouds
 		this.body = body
 		this.phase = 0
-		this.presetTimer = 0   // seconds spent on current preset (color cycle)
+		this.prevKick = 0   // for the 'steps' transition's kick-edge detection
 		this.onPresetAdvanced = null   // wired by the scene- lets the GUI mirror the cycle
 	}
 
-	// Restart the dwell window from the current preset (manual GUI picks call this).
+	// Abort any running transition (manual GUI picks call this).
 	resetPresetTimer() {
-		this.presetTimer = 0
+		this.transition = null
 	}
 
-	// Palette change on a musical drop- the ONLY thing that moves the palette
-	// (no timer cycle). Two flavors behind params.autopilot.dropSnap:
-	// - surge (default off): the transition animates from where it is and
-	//   completes in ~1.5s- smooth but clearly drop-bound.
-	// - snap: hard cut to the next preset, a deliberate color slam.
+	// Palette change on a musical drop- the ONLY thing that moves the palette.
+	// dropMode picks the style ('random' draws one per drop):
+	// - snap: hard cut to the next preset, a deliberate color slam
+	// - surge: the transition glides to the next preset in ~1.5s
+	// - flash: colors blow out THROUGH white with the drop flash, the new
+	//   palette reveals itself as it settles
+	// - steps: quantized- a quarter of the way on each kick, landing in 4 beats
 	skipToNext() {
-		if (!this.params.autopilot.dropSnap) {
-			this.surging = true
+		const p = this.params.autopilot
+		let mode = p.dropMode
+		if (mode === 'random') mode = ['snap', 'snap', 'surge', 'flash', 'flash', 'steps'][Math.floor(Math.random() * 6)]
+		if (mode === 'snap') {
+			p.preset = (p.preset + 1) % COLOR_PRESETS.length
+			this.transition = null   // a pending transition must not keep running
+			this.onPresetAdvanced?.(p.preset)
 			return
 		}
-		const p = this.params.autopilot
-		p.preset = (p.preset + 1) % COLOR_PRESETS.length
-		this.presetTimer = 0
-		this.surging = false   // a pending surge must not keep running after the snap
-		this.onPresetAdvanced?.(p.preset)
+		this.transition = { mode, t: 0, step: 0, idle: 0 }
 	}
 
-	update(dt) {
+	// Advance the running transition; returns the current mix factor (0..1).
+	transitionMix(dt, audio) {
+		const tr = this.transition
+		if (tr.mode === 'surge') {
+			tr.t = Math.min(1, tr.t + dt / 1.5)
+			return tr.t * tr.t * (3 - 2 * tr.t)
+		}
+		if (tr.mode === 'flash') {
+			tr.t = Math.min(1, tr.t + dt / 1.2)
+			return tr.t
+		}
+		// steps: a quarter per kick edge, with a fallback tick if the kicks stop.
+		const kickHit = audio.kick > 0.9 && this.prevKick <= 0.9
+		tr.idle += dt
+		if (kickHit || tr.idle > 0.8) {
+			tr.step = Math.min(4, tr.step + 1)
+			tr.idle = 0
+		}
+		tr.t = tr.step / 4
+		return tr.t
+	}
+
+	update(dt, audio) {
 		this.phase += dt * this.params.autopilot.speed
 		const phase = this.phase
 		// Normalized sine [-1, 1] and [0, 1] helpers- period in seconds (at speed=1).
@@ -68,27 +103,33 @@ export default class Autopilot {
 
 		if (!p.autopilot.colorCycle) return
 
-		// The palette holds still- NO timer cycle. It only moves when a drop
-		// calls skipToNext(): a snap, or a surge that races the transition to
-		// completion in ~1.5s. `params.autopilot.preset` stays the source of
-		// truth, advanced + mirrored into the GUI dropdown as transitions land.
-		const interval = Math.max(0.5, p.autopilot.switchInterval)
-		if (this.surging) {
-			this.presetTimer += dt * interval / 1.5
-			if (this.presetTimer >= interval) {
-				this.presetTimer = 0
-				this.surging = false
-				p.autopilot.preset = (p.autopilot.preset + 1) % COLOR_PRESETS.length
-				this.onPresetAdvanced?.(p.autopilot.preset)
-			}
-		}
+		// The palette holds still- it only moves when a drop calls skipToNext().
+		// `params.autopilot.preset` stays the source of truth, advanced +
+		// mirrored into the GUI dropdown when a transition lands.
 		const cur = p.autopilot.preset
 		const nxt = (cur + 1) % COLOR_PRESETS.length
-		const f = this.presetTimer / interval
-		const smooth = f * f * (3 - 2 * f)   // ease so each preset feels held, not constantly drifting
-		this.sky.lerpColors(COLOR_PRESETS[cur], COLOR_PRESETS[nxt], smooth)
-		this.clouds.lerpColors(COLOR_PRESETS[cur], COLOR_PRESETS[nxt], smooth)
-		this.body.lerpColors(COLOR_PRESETS[cur], COLOR_PRESETS[nxt], smooth)
+		let A = COLOR_PRESETS[cur]
+		let B = COLOR_PRESETS[nxt]
+		let f = 0
+		if (this.transition) {
+			f = this.transitionMix(dt, audio)
+			if (this.transition.mode === 'flash') {
+				// Through-white: blow out over the first 35%, reveal over the rest.
+				if (f < 0.35) { B = WHITE_PRESET; f = f / 0.35 }
+				else { A = WHITE_PRESET; B = COLOR_PRESETS[nxt]; f = (f - 0.35) / 0.65 }
+			}
+			if (this.transition.t >= 1) {
+				this.transition = null
+				p.autopilot.preset = nxt
+				this.onPresetAdvanced?.(nxt)
+				A = COLOR_PRESETS[nxt]
+				f = 0
+			}
+		}
+		this.prevKick = audio.kick
+		this.sky.lerpColors(A, B, f)
+		this.clouds.lerpColors(A, B, f)
+		this.body.lerpColors(A, B, f)
 	}
 
 }

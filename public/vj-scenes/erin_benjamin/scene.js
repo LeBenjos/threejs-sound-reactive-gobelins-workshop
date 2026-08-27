@@ -92,7 +92,7 @@ export default class ErinBenjaminScene {
 		this.body.update(dt, a, this.features, this.cameraRig.camera)
 
 		// Autopilot next- mutates params so the audio-reactive logic below adds on top.
-		if (this.params.autopilot.enabled) this.autopilot.update(dt)
+		if (this.params.autopilot.enabled) this.autopilot.update(dt, a)
 
 		// The body breathes with the bass, and slowly drifts on air currents
 		// (two incommensurate periods- reads as wandering, not oscillating).

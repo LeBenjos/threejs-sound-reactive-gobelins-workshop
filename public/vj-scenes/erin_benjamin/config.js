@@ -4,7 +4,6 @@ export const TARGET_HEIGHT = 2   // body normalized to ~2 world units tall
 export const BLOOM_LAYER = 1     // body meshes get this layer- bloomComposer renders only it
 // Default total cloud count- live-tunable via params.clouds.count.
 export const CLOUD_COUNT_DEFAULT = 290
-export const PRESET_HOLD_SECONDS = 60   // dwell on one preset before lerping to the next (at autopilot speed=1)
 
 // Discrete parallax depth layers (near -> horizon). Each band gets its own
 // radius/scale/height range and speed multiplier. Far layers are slower and
@@ -77,9 +76,10 @@ export function createDefaultParams() {
 		// bpmSlow/bpmFast bracket the tempo estimate into `pace`; rateMin/rateMax
 		// is the resulting world-speed multiplier applied scene-wide.
 		audio: { quiet: 0.25, loud: 0.75, attack: 0.4, release: 2.0, floor: 0.15, bpmSlow: 90, bpmFast: 165, rateMin: 0.7, rateMax: 1.3 },
-		// dropSnap: on a musical drop, hard-cut the palette (true) or fast-smooth
-		// surge to the next preset (false).
-		autopilot: { enabled: true, speed: 0.5, colorCycle: true, preset: 0, switchInterval: PRESET_HOLD_SECONDS, dropSnap: true },
+		// dropMode: palette transition style on a drop- 'random' draws one per
+		// drop among snap (hard cut), surge (1.5s glide), flash (through white)
+		// and steps (a quarter per kick).
+		autopilot: { enabled: true, speed: 0.5, colorCycle: true, preset: 0, dropMode: 'random' },
 		// Director (base flow + hard-kick accents): a hard kick punches to an
 		// accent shot when energy >= minEnergy, the cooldown has elapsed and the
 		// accentChance roll passes; the accent holds accentMin..accentMax seconds
