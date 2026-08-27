@@ -15,11 +15,11 @@ export const CLOUD_LAYERS = [
 	{ radiusMin: 2, radiusMax: 6, yRange: 8, scaleMin: 1.0, scaleMax: 2.2, speedMult: 1.9, countShare: 0.18 },
 	{ radiusMin: 5, radiusMax: 12, yRange: 12, scaleMin: 1.8, scaleMax: 3.8, speedMult: 1.0, countShare: 0.22 },
 	{ radiusMin: 11, radiusMax: 24, yRange: 20, scaleMin: 3.2, scaleMax: 6.5, speedMult: 0.55, countShare: 0.20 },
-	{ radiusMin: 22, radiusMax: 48, yRange: 32, scaleMin: 5.5, scaleMax: 13.0, speedMult: 0.28, countShare: 0.17 },
-	{ radiusMin: 42, radiusMax: 85, yRange: 50, scaleMin: 9.0, scaleMax: 22.0, speedMult: 0.13, countShare: 0.13 },
+	{ radiusMin: 22, radiusMax: 48, yRange: 32, scaleMin: 5.5, scaleMax: 13.0, speedMult: 0.38, countShare: 0.17 },
+	{ radiusMin: 42, radiusMax: 85, yRange: 50, scaleMin: 9.0, scaleMax: 22.0, speedMult: 0.20, countShare: 0.13 },
 	// Horizon backdrop: few but HUGE and near-static- fills the far background
 	// so wide shots never face a bare sky gradient.
-	{ radiusMin: 80, radiusMax: 160, yRange: 70, scaleMin: 22.0, scaleMax: 45.0, speedMult: 0.06, countShare: 0.10 },
+	{ radiusMin: 80, radiusMax: 160, yRange: 70, scaleMin: 22.0, scaleMax: 45.0, speedMult: 0.12, countShare: 0.10 },
 ]
 
 // Sky + cloud color palettes. Autopilot cycles between them (smooth lerp) when
@@ -109,9 +109,14 @@ export function createDefaultParams() {
 		camera: { baseSpeed: 0.2, kickMult: 2.0, verticalSpeed: 0.26, verticalAmp: 0.85, verticalEnergyMult: 0.5, shake: 0.035, rollAmp: 0.12, rollSpeed: 0.06 },
 		sky: {
 			enabled: true,
-			scrollSpeedBase: 0.36,
-			scrollEnergyMult: 0.27,
-			scrollKickMult: 0.7,
+			// The FBM background plays the INFINITELY FAR layer: it must be the
+			// slowest thing on screen. At the old rates (~0.34 screen/s mid-energy)
+			// it out-ran every sprite layer beyond ~10 units, so the big far clouds
+			// read as FALLING against it. The speed feeling now belongs to the
+			// sprite field (riseSpeedBase below); the sky just breathes.
+			scrollSpeedBase: 0.06,
+			scrollEnergyMult: 0.05,
+			scrollKickMult: 0.12,
 			cloudScale: 8.0,
 			brightnessBase: 0.57,
 			brightnessEnergyMult: 0.6,
@@ -122,7 +127,7 @@ export function createDefaultParams() {
 		clouds: {
 			enabled: true,
 			count: CLOUD_COUNT_DEFAULT,
-			riseSpeedBase: 1.6,
+			riseSpeedBase: 1.9,   // slightly up- the sprites carry the speed the sky gave up
 			riseEnergyMult: 2.4,
 			riseKickMult: 4.0,
 			opacity: 0.85,

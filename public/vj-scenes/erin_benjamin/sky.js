@@ -14,6 +14,7 @@ export default class Sky {
 		// it moves as one world with the 3D sprites (see update).
 		this.pan = 0
 		this.prevAzimuth = null
+		this.dirScratch = new THREE.Vector3()   // reused by the pitch coupling in update()
 		const geometry = new THREE.PlaneGeometry(2, 2)
 		const material = new THREE.ShaderMaterial({
 			uniforms: THREE.UniformsUtils.clone(SkyShader.uniforms),
@@ -63,6 +64,16 @@ export default class Sky {
 		const u = this.uniforms
 		u.time.value = this.time
 		u.panX.value = this.pan
+		// Pitch/roll coupling, completing the yaw pan above. The sprite field is
+		// y-locked to the camera, so height changes (LFO, bob, tracked shots)
+		// reach the screen purely as PITCH, and applyFeel adds a slow roll: both
+		// must carry the background too, or the slow far sprites read as falling
+		// against a frozen sky. Pitch is continuous (asin, no wrap); hard cuts
+		// jump it, masked by the cut.
+		const vFov = THREE.MathUtils.degToRad(camera.fov)
+		const pitch = Math.asin(THREE.MathUtils.clamp(camera.getWorldDirection(this.dirScratch).y, -1, 1))
+		u.panY.value = pitch / vFov
+		u.rollAngle.value = camera.userData.roll ?? 0
 		u.churnTime.value = this.churn
 		u.cloudScale.value = p.cloudScale
 		// Clamped at white: past 1.0 the cloud tint burns the whole frame out and

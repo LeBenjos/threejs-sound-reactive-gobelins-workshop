@@ -8,6 +8,8 @@ export default {
 		time: { value: 0 },
 		panX: { value: 0 },            // horizontal world-pan- follows the camera azimuth (sky.js)
 		churnTime: { value: 0 },       // warp clock- shapes boil slowly, energy-driven (sky.js)
+		panY: { value: 0 },            // vertical world-shift- follows the camera pitch (sky.js)
+		rollAngle: { value: 0 },       // screen-space rotation- follows the camera roll (sky.js)
 		cloudScale: { value: 3.0 },
 		coverageShift: { value: 0 },   // raises the FBM threshold- sparser clouds at high energy
 		brightness: { value: 0.95 },
@@ -33,6 +35,8 @@ export default {
 	fragmentShader: /* glsl */`
 		uniform float time;
 		uniform float panX;
+		uniform float panY;
+		uniform float rollAngle;
 		uniform float churnTime;
 		uniform float cloudScale;
 		uniform float coverageShift;
@@ -77,10 +81,18 @@ export default {
 			// rows over time, which reads as upward motion.
 			vec2 uv = vUv;
 			uv.x *= resolution.x / resolution.y;
-			// panX couples the background to the camera's orbital sweep (set in
-			// sky.js), so the FBM pans WITH the 3D sprites instead of sitting
-			// frozen behind their arcs. The vertical scroll stays the fall.
+			// Camera coupling (yaw=panX, pitch=panY, roll=rollAngle- all set in
+			// sky.js): the background moves as part of the same world the sprites
+			// live in, instead of sitting frozen behind their sweeps. Roll first,
+			// around the screen center, so the fall scroll below runs along the
+			// tilted world vertical; then the yaw/pitch shifts; then the fall.
+			vec2 ctr = vec2( 0.5 * resolution.x / resolution.y, 0.5 );
+			float cr = cos( rollAngle );
+			float sr = sin( rollAngle );
+			vec2 rd = uv - ctr;
+			uv = ctr + vec2( cr * rd.x - sr * rd.y, sr * rd.x + cr * rd.y );
 			uv.x += panX;
+			uv.y += panY;
 			uv.y -= time;
 
 			// Spatial palette transitions: the B palette advances behind a moving
@@ -115,7 +127,10 @@ export default {
 			// itself: billowing shapes, not raw noise) and churnTime drifts the
 			// warp so the masses boil slowly.
 			vec2 m = uv * cloudScale * 0.35;
-			vec2 warp = vec2( fbm( m + vec2( 0.0, churnTime ) ), fbm( m + vec2( 5.2, 1.3 + churnTime ) ) );
+			// Churn drifts UPWARD (-churnTime): with +churnTime the boil sank
+			// against the scroll, and in breakdowns (scroll near its floor) the
+			// sky's own cumulus visibly dripped downward.
+			vec2 warp = vec2( fbm( m + vec2( 0.0, -churnTime ) ), fbm( m + vec2( 5.2, 1.3 - churnTime ) ) );
 			vec2 mw = m + ( warp - 0.5 ) * 1.2;
 			float mass = fbm( mw );
 			float detail = fbm( uv * cloudScale + vec2( 37.2, 11.7 ) );

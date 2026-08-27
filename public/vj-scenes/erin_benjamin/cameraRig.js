@@ -40,6 +40,7 @@ export default class CameraRig {
 		const t = this.feelTime
 		const roll = Math.sin(t * p.rollSpeed * Math.PI * 2) * p.rollAmp * (0.4 + 0.6 * features.energy)
 		this.camera.rotateZ(roll)
+		this.camera.userData.roll = roll   // read by Sky- the background rolls with the horizon
 		// Amplitude follows the tempo too (pace 0..1): a slow track buffets
 		// gently even when loud, a fast one shakes fully. And it scales with the
 		// distance to the subject: a fixed world-space jitter that reads as a

@@ -33,11 +33,13 @@ export default {
 		varying vec3 vViewPos;
 		varying vec3 vSprite;
 		varying float vFade;
+		varying float vScale;
 		varying vec4 vClip;
 		void main() {
 			vUv = uv;
 			vSprite = aSprite;
 			vFade = aFade;
+			vScale = aScale.y;
 			// The group carries the camera's vertical lock- bring the anchor
 			// through the model matrix before billboarding around it.
 			vec3 anchor = ( modelMatrix * vec4( aOffset, 1.0 ) ).xyz;
@@ -71,6 +73,7 @@ export default {
 		varying vec3 vViewPos;
 		varying vec3 vSprite;
 		varying float vFade;
+		varying float vScale;
 		varying vec4 vClip;
 
 		float hash( vec2 p ) {
@@ -143,7 +146,16 @@ export default {
 			// Domain warp: the field curls on itself- organic billows instead of
 			// raw noise- and time drifts the warp so the cloud churns from the
 			// inside (energy-driven clock, integrated in clouds.js).
-			vec2 warp = vec2( fbm( w + vec2( 0.0, time ) ), fbm( w + vec2( 5.2, 1.3 + time ) ) );
+			// The clock offset is (a) COUNTER-ROTATED into the noise domain (same
+			// construction as the lighting probe below) so the drift reads as
+			// screen-UP for every sprite- unrotated, each sprite drifted in a
+			// random direction and half the field visibly sank- and (b) divided
+			// by the sprite scale so the world-equivalent drift speed is identical
+			// for a 1-unit puff and a 45-unit backdrop giant (unscaled, the drift
+			// out-ran the far layers' real rise 10-90x).
+			float tS = time / vScale;
+			vec2 churnOff = vec2( sa, -ca ) * tS;
+			vec2 warp = vec2( fbm( w + churnOff ), fbm( w + vec2( 5.2, 1.3 ) + churnOff ) );
 			float n = fbm( w + ( warp - 0.5 ) * 1.4 );
 			// FBM-warped radius: the silhouette turns jagged and organic instead of
 			// showing the quad's circular falloff. Dense core, soft ragged edge.
