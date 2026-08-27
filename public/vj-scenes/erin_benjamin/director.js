@@ -49,6 +49,8 @@ export default class Director {
 		this.accentDur = 0
 		this.dollyTau = 0
 		this.drift = null
+		this.strobeLeft = 0
+		this.strobeTimer = 0
 		this.shot = null
 		this.state = { shot: 'base' }   // GUI monitor binds to this
 		this.enterBase(true)
@@ -86,6 +88,16 @@ export default class Director {
 		}
 
 		// Accent shot running.
+		// Strobe: a burst of ultra-fast cuts (one every 0.18s)- after the last
+		// one, the current accent lives its normal life then returns to base.
+		if (this.strobeLeft > 0) {
+			this.strobeTimer += dt
+			if (this.strobeTimer >= 0.18) {
+				this.strobeTimer = 0
+				this.strobeLeft--
+				this.enterAccent(features.energy)
+			}
+		}
 		this.accentTime += dt
 		if (this.shot.dolly) {
 			const r = this.rig.orbit
@@ -168,6 +180,13 @@ export default class Director {
 		this.rig.shotBobMult = next.bobMult
 		if (next.dolly) this.dollyTau = rand(2, 4)   // short accent- close the distance fast
 		this.rollDrift(next)
+	}
+
+	// Strobe montage: 3-4 hard cuts in ~0.7s- fired on some drops.
+	strobe(energy) {
+		this.strobeLeft = 2 + Math.floor(Math.random() * 2)   // cuts AFTER the first one
+		this.strobeTimer = 0
+		this.enterAccent(energy)
 	}
 
 	// Signature entrance (scene.play- every time the host loop brings us back

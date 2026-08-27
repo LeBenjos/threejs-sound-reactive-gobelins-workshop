@@ -119,6 +119,9 @@ export default class ErinBenjaminScene {
 		this.dropTimeline.update(this.features)
 		this.features.update(dt, a)
 		this.wind.update(dt, this.features)   // writes params.wind.angle- sky/clouds/lines read it below
+		// Events before the body: they own features.freeze (bullet time), which
+		// must gate the mixer in the SAME frame it changes.
+		this.events.update(dt, a, this.features)
 		// Inspection mode: the world modules follow the debug camera instead of
 		// the rig's, and the postfx chain is bypassed (raw render + rig frustum).
 		const cam = this.debugView?.enabled ? this.debugView.camera : this.cameraRig.camera
@@ -140,11 +143,12 @@ export default class ErinBenjaminScene {
 		// flash itself rides features.dropPulse inside sky/bloom/rim).
 		if (this.features.dropPulse > 0.9 && this.prevDropPulse <= 0.9) {
 			this.autopilot.skipToNext()
-			if (this.director.mode === 'base') this.director.enterAccent(this.features.energy)
+			// Some drops land as a strobe montage instead of a single accent.
+			if (Math.random() < this.params.director.strobeChance) this.director.strobe(this.features.energy)
+			else if (this.director.mode === 'base') this.director.enterAccent(this.features.energy)
 		}
 		this.prevDropPulse = this.features.dropPulse
 
-		this.events.update(dt, a, this.features)
 		this.director.update(dt, a, this.features)
 		this.cameraRig.update(dt, a, this.features)
 		this.sky.update(dt, a, this.features, cam)   // backdrop: own motion Y-only, X follows the view yaw- see sky.js

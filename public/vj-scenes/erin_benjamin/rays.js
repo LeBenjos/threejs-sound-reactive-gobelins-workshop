@@ -105,7 +105,7 @@ export default class Rays {
 		const p = this.params.rays
 		this.mesh.visible = p.enabled && p.opacity >= 0.005
 		if (!this.mesh.visible) return
-		this.material.uniforms.time.value += dt * features.rate
+		this.material.uniforms.time.value += dt * features.rate * features.freeze
 		this.material.uniforms.globalOpacity.value = p.opacity
 	}
 

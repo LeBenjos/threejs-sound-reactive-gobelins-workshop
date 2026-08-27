@@ -117,7 +117,7 @@ export default class Motes {
 		// The motes ride the fall's upward stream- slower than the clouds (they
 		// are weightless specks) but clearly directional, scaled by tempo and
 		// energy like everything else that moves.
-		const rise = p.rise * features.rate * (0.4 + 1.6 * features.energy)
+		const rise = p.rise * features.rate * features.freeze * (0.4 + 1.6 * features.energy)
 		// Same wind as the clouds/streaks (world +X axis)- weightless dust is
 		// the FIRST thing a gust should visibly carry, amplified 1.6x so the
 		// pre-drop lean and the slam sweep the specks hardest of all.

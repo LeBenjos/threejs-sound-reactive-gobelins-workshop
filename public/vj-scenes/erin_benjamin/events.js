@@ -23,11 +23,25 @@ export default class MusicEvents {
 		this.director = director
 		this.cooldown = 0
 		this.prevKickHard = 0
+		this.bulletIn = 0     // countdown to the bullet-time freeze (armed by a backflip)
+		this.bulletLeft = 0   // seconds of freeze remaining
 		this.state = { last: '-' }   // GUI monitor binds to this
 	}
 
 	update(dt, audio, features) {
 		const p = this.params.events
+		// Bullet time: mid-backflip, the WORLD freezes for ~0.8s while the
+		// camera keeps carving around the suspended body (the rig ignores
+		// features.freeze- see cameraRig). Armed 1.3s after the flip starts.
+		features.freeze = 1
+		if (this.bulletIn > 0) {
+			this.bulletIn -= dt
+			if (this.bulletIn <= 0) this.bulletLeft = 0.8
+		}
+		if (this.bulletLeft > 0) {
+			this.bulletLeft -= dt
+			features.freeze = 0.02
+		}
 		if (!p.enabled) return
 		this.cooldown -= dt
 
@@ -54,6 +68,7 @@ export default class MusicEvents {
 
 		const hold = Array.isArray(picked.hold) ? rand(picked.hold[0], picked.hold[1]) : picked.hold
 		if (!this.body.playEvent(picked.name, hold)) return
+		if (picked.name === 'backflip') this.bulletIn = 1.3   // matrix moment mid-flip
 		this.state.last = picked.name
 		this.cooldown = p.cooldown
 		// Stage the move: punch the camera if the director is idling in base.

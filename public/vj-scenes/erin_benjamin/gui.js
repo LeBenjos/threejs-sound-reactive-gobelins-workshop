@@ -180,6 +180,7 @@ export default class Gui {
 		director.addBinding(params.director, 'minEnergy', { min: 0, max: 1, step: 0.05 })
 		director.addBinding(params.director, 'zoomDrift', { min: 0, max: 1, step: 0.05 })
 		director.addBinding(params.director, 'chainChance', { min: 0, max: 0.9, step: 0.05 })
+		director.addBinding(params.director, 'strobeChance', { min: 0, max: 1, step: 0.05, label: 'strobe (drop)' })
 
 		const events = this.pane.addFolder({ title: 'Events', expanded: false })
 		events.addBinding(this.scene.events.state, 'last', { readonly: true })

@@ -156,7 +156,7 @@ export default class Clouds {
 		const floor = this.params.audio.floor
 		const base = p.riseSpeedBase * (floor + (1 - floor) * features.energy)
 		const baseRise = base + features.energy * p.riseEnergyMult + features.flow * p.riseKickMult * features.energy
-		const baseDy = dt * features.rate * baseRise
+		const baseDy = dt * features.rate * features.freeze * baseRise
 		// Sprites ease back as the energy rises: at full intensity they streak as
 		// translucent accents instead of stacking a second wall over the FBM sky.
 		// The drop's blast wave thins the field for an instant (it re-forms as
@@ -165,7 +165,7 @@ export default class Clouds {
 		this.material.uniforms.hazeAmount.value = p.haze
 		this.material.uniforms.aspect.value = camera.aspect   // wipe's screen metric
 		// Placid billows when calm, boiling on the drops.
-		this.churn += dt * (0.06 + features.energy * 0.3)
+		this.churn += dt * features.freeze * (0.06 + features.energy * 0.3)
 		this.material.uniforms.time.value = this.churn
 		// Density weather: the field breathes between sparse and crowded over
 		// two slow incommensurate periods (73s/47s, random phases per session)-

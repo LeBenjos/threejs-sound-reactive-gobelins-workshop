@@ -151,7 +151,7 @@ export function createDefaultParams() {
 		// zooms during its run (half in, half out).
 		// chainChance: an expiring accent may cut straight to another shot
 		// instead of returning to base (geometric decay- base stays the norm).
-		director: { enabled: true, accentChance: 0.6, accentCooldown: 6, accentMin: 2.5, accentMax: 5, minEnergy: 0.45, zoomDrift: 0.7, chainChance: 0.35 },
+		director: { enabled: true, accentChance: 0.6, accentCooldown: 6, accentMin: 2.5, accentMax: 5, minEnergy: 0.45, zoomDrift: 0.7, chainChance: 0.35, strobeChance: 0.35 },
 		// Drop impact: shock = the expanding lens shockwave's displacement;
 		// kick = the single hard camera hit; punch = the fov zoom snap.
 		drop: { shock: 0.06, kick: 1.0, punch: 1.0 },
