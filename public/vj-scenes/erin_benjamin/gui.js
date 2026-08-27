@@ -223,6 +223,7 @@ export default class Gui {
 		skyFolder.addBinding(params.sky, 'cloudScale', { min: 0.5, max: 10, step: 0.1 })
 		skyFolder.addBinding(params.sky, 'brightnessBase', { min: 0, max: 1.5, step: 0.01 })
 		skyFolder.addBinding(params.sky, 'brightnessEnergyMult', { min: 0, max: 1.5, step: 0.01 })
+		skyFolder.addBinding(params.sky, 'midCoverage', { min: 0, max: 0.3, step: 0.01, label: 'médiums → nuages' })
 		skyFolder.addBinding(params.sky, 'topColor', { view: 'color' }).on('change', (ev) => {
 			sky.uniforms.skyTop.value.set(ev.value)
 		})

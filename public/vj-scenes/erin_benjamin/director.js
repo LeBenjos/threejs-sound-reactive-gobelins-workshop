@@ -164,6 +164,29 @@ export default class Director {
 		this.rollDrift(next)
 	}
 
+	// Signature entrance (scene.play- every time the host loop brings us back
+	// on screen, and the standalone start): a dive- the dolly launched from
+	// farther out than usual, held longer, closing fast on the body.
+	entrance() {
+		const dolly = ACCENT_SHOTS.find((s) => s.name === 'dolly')
+		this.mode = 'accent'
+		this.shot = dolly
+		this.state.shot = 'dolly'
+		this.accentTime = 0
+		this.accentDur = 4.5
+		this.drift = null
+		this.rig.trackShot = null
+		const r = this.rig.orbit
+		r.angle += rand(1.2, 2.5) * (Math.random() < 0.5 ? -1 : 1)
+		this.rig.orbitDir = Math.random() < 0.5 ? -1 : 1
+		r.radius = 9
+		r.baseHeight = rand(0.4, 0.9)
+		this.rig.lookY = dolly.lookY
+		this.rig.shotSpeedMult = dolly.speedMult
+		this.rig.shotBobMult = dolly.bobMult
+		this.dollyTau = 2.5
+	}
+
 	// Roll the zoom drift for the accent that was just cut to: zoom in, zoom out
 	// or hold, gliding toward a clamped target so the lens never enters the body.
 	rollDrift(next) {

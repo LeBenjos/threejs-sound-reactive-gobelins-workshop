@@ -81,8 +81,10 @@ export default class Sky {
 		// The drop flash rides ABOVE the white clamp on purpose- a brief burst.
 		u.brightness.value = Math.min(1, p.brightnessBase + features.energy * p.brightnessEnergyMult) + features.dropPulse * 0.8
 		// Intense passages thin the cloud cover (see SkyShader): speed reads
-		// through fewer, denser clouds- not through more noise.
-		u.coverageShift.value = features.energy * 0.17
+		// through fewer, denser clouds- not through more noise. The MIDS pull
+		// cover back in: the melody (voice, synths, guitars) thickens the sky
+		// while the rhythm section drives everything else.
+		u.coverageShift.value = features.energy * 0.17 - features.mid * p.midCoverage
 	}
 
 	// Lerp the sky uniforms between two color presets at factor f (0=A, 1=B).

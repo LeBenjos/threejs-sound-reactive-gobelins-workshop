@@ -5,7 +5,7 @@ import Autopilot from './autopilot.js'
 import Body from './body.js'
 import CameraRig from './cameraRig.js'
 import Clouds from './clouds.js'
-import { createDefaultParams } from './config.js'
+import { COLOR_PRESETS, createDefaultParams } from './config.js'
 import Director from './director.js'
 import MusicEvents from './events.js'
 import Gui from './gui.js'
@@ -76,6 +76,17 @@ export default class ErinBenjaminScene {
 
 	play() {
 		this.clock = new THREE.Clock()   // fresh delta on every resume- no jump after a long stop()
+		// Signature entrance- fires on EVERY activation (each time the host loop
+		// brings the scene back on screen, and the standalone start): a fresh
+		// random palette, a dive-in dolly, and a soft burst (0.85 stays under the
+		// 0.9 rising edge, so it flashes and shocks WITHOUT re-switching the
+		// palette we just picked).
+		this.params.autopilot.preset = Math.floor(Math.random() * COLOR_PRESETS.length)
+		this.autopilot.resetPresetTimer()
+		this.gui.onPresetAdvanced(this.params.autopilot.preset)
+		this.director.entrance()
+		this.features.dropPulse = 0.85
+		this.prevDropPulse = 0.85
 		this.renderer.setAnimationLoop(() => this.update())
 	}
 

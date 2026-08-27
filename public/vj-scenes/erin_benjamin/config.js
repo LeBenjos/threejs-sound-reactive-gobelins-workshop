@@ -126,6 +126,7 @@ export function createDefaultParams() {
 			cloudScale: 8.0,
 			brightnessBase: 0.57,
 			brightnessEnergyMult: 0.6,
+			midCoverage: 0.12,   // the mids (melody) thicken the FBM cloud cover
 			topColor: '#6fb4ff',
 			bottomColor: '#bfe1ff',
 			cloudColor: '#ffffff',
