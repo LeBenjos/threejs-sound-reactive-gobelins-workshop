@@ -36,6 +36,14 @@ export const COLOR_PRESETS = [
 		bodyRim: new THREE.Color(0xff6a00),
 	},
 	{
+		// Golden heaven: warm gold zenith dissolving into cream light, gilded
+		// clouds- the divine card. Violet rim so the body still pops in the glow.
+		name: 'Paradise',
+		skyTop: new THREE.Color(0xf0c568), skyBottom: new THREE.Color(0xfff3d6),
+		skyCloudColor: new THREE.Color(0xfff8e8), cloudsColor: new THREE.Color(0xf2dca6),
+		bodyRim: new THREE.Color(0x7d5cff),
+	},
+	{
 		// Cold pale morning: gray-blue zenith over a peach glow, warm gray clouds.
 		name: 'Dawn',
 		skyTop: new THREE.Color(0x6f8fb0), skyBottom: new THREE.Color(0xf6d3b5),
@@ -75,6 +83,14 @@ export const COLOR_PRESETS = [
 		skyTop: new THREE.Color(0x030b1a), skyBottom: new THREE.Color(0x16406b),
 		skyCloudColor: new THREE.Color(0x2f5d95), cloudsColor: new THREE.Color(0x24476f),
 		bodyRim: new THREE.Color(0x00e5a0),
+	},
+	{
+		// Deep space: near-black over drowned violet-indigo, nebula-tinted
+		// clouds- and the white dust motes read as stars. Starlight rim.
+		name: 'Cosmos',
+		skyTop: new THREE.Color(0x010209), skyBottom: new THREE.Color(0x0d1030),
+		skyCloudColor: new THREE.Color(0x232a5c), cloudsColor: new THREE.Color(0x161a40),
+		bodyRim: new THREE.Color(0xcfe8ff),
 	},
 	{
 		// Graphite storm front: slate gradient, steel clouds, electric-yellow rim.
