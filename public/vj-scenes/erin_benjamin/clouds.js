@@ -116,8 +116,9 @@ export default class Clouds {
 
 	// Wipe transition: both palettes live in the shader, the B set grows from
 	// screen center as `front` goes 0 → 1 (same metric as the sky).
-	setWipe(A, B, front) {
+	setWipe(A, B, front, mode) {
 		const u = this.material.uniforms
+		u.wipeMode.value = mode
 		u.cloudColor.value.copy(A.cloudsColor)
 		u.shadowColor.value.copy(A.skyTop).lerp(A.cloudsColor, 0.55).multiplyScalar(0.8)
 		u.hazeColor.value.copy(A.skyBottom)

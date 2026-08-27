@@ -86,8 +86,9 @@ export default class Sky {
 
 	// Wipe transition: both palettes live in the shader, the B set grows from
 	// screen center as `front` goes 0 → 1.
-	setWipe(A, B, front) {
+	setWipe(A, B, front, mode) {
 		const u = this.uniforms
+		u.wipeMode.value = mode
 		u.skyTop.value.copy(A.skyTop)
 		u.skyBottom.value.copy(A.skyBottom)
 		u.cloudColor.value.copy(A.skyCloudColor)

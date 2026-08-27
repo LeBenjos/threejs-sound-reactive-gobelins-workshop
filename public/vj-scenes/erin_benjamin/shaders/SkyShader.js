@@ -21,6 +21,7 @@ export default {
 		skyBottomB: { value: new THREE.Color(0xbfe1ff) },
 		cloudColorB: { value: new THREE.Color(0xffffff) },
 		wipe: { value: 0 },
+		wipeMode: { value: 0 },   // 0 circle · 1 curtain · 2 iris · 3 dissolve
 	},
 	vertexShader: /* glsl */`
 		varying vec2 vUv;
@@ -44,6 +45,7 @@ export default {
 		uniform vec3 skyBottomB;
 		uniform vec3 cloudColorB;
 		uniform float wipe;
+		uniform float wipeMode;
 		varying vec2 vUv;
 
 		float hash( vec2 p ) {
@@ -81,12 +83,27 @@ export default {
 			uv.x += panX;
 			uv.y -= time;
 
-			// Wipe transition: the B palette grows in a soft circle from screen
-			// center to the corners (aspect-corrected radius, front covers the
-			// farthest corner at wipe=1).
-			float wd = length( vec2( ( vUv.x - 0.5 ) * resolution.x / resolution.y, vUv.y - 0.5 ) );
-			float front = wipe * 1.25;
-			float wm = 1.0 - smoothstep( front - 0.18, front, wd );
+			// Spatial palette transitions: the B palette advances behind a moving
+			// front (metric picked by wipeMode). Skipped entirely outside
+			// transitions (wipe stays 0).
+			float wm = 0.0;
+			if ( wipe > 0.0 ) {
+				float aspectW = resolution.x / resolution.y;
+				float wd = length( vec2( ( vUv.x - 0.5 ) * aspectW, vUv.y - 0.5 ) );
+				if ( wipeMode < 0.5 ) {          // circle bursting from center
+					float front = wipe * 1.25;
+					wm = 1.0 - smoothstep( front - 0.18, front, wd );
+				} else if ( wipeMode < 1.5 ) {   // curtain rising with the fall stream
+					float front = wipe * 1.3;
+					wm = 1.0 - smoothstep( front - 0.25, front, vUv.y );
+				} else if ( wipeMode < 2.5 ) {   // inverse iris- closes on the center
+					float inner = ( 1.0 - wipe ) * 1.25 - 0.18;
+					wm = smoothstep( inner, inner + 0.18, wd );
+				} else {                         // organic FBM dissolve
+					float th = 1.05 - wipe * 1.2;
+					wm = smoothstep( th - 0.08, th + 0.08, fbm( vec2( vUv.x * aspectW, vUv.y ) * 3.5 ) );
+				}
+			}
 			vec3 topC = mix( skyTop, skyTopB, wm );
 			vec3 bottomC = mix( skyBottom, skyBottomB, wm );
 			vec3 cloudC = mix( cloudColor, cloudColorB, wm );

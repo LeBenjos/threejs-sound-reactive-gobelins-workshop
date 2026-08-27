@@ -2,17 +2,22 @@ import * as THREE from 'three'
 
 import { COLOR_PRESETS } from './config.js'
 
-// Waypoints for the through-X transitions: 'flash' blows out to white before
-// the next palette reveals itself; 'dip' sinks into darkness and relights.
+// Spatial transitions: shader wipeMode + per-mode duration and body factor
+// (the body sits at screen center- it leads a center-out front, trails an
+// edges-in one). Sky and clouds carry both palettes; see setWipe().
+const SPATIAL = {
+	wipe: { shaderMode: 0, duration: 1.4, body: (f) => Math.min(1, f * 1.6) },
+	curtain: { shaderMode: 1, duration: 1.4, body: (f) => f },
+	iris: { shaderMode: 2, duration: 1.4, body: (f) => Math.max(0, (f - 0.55) / 0.45) },
+	dissolve: { shaderMode: 3, duration: 1.7, body: (f) => f },
+}
+
+// Waypoint for the 'flash' transition: everything blows out to white before
+// the next palette reveals itself.
 const WHITE_PRESET = {
 	skyTop: new THREE.Color(0xffffff), skyBottom: new THREE.Color(0xffffff),
 	skyCloudColor: new THREE.Color(0xffffff), cloudsColor: new THREE.Color(0xffffff),
 	bodyRim: new THREE.Color(0xffffff),
-}
-const BLACK_PRESET = {
-	skyTop: new THREE.Color(0x030308), skyBottom: new THREE.Color(0x050510),
-	skyCloudColor: new THREE.Color(0x08080f), cloudsColor: new THREE.Color(0x060609),
-	bodyRim: new THREE.Color(0x101018),
 }
 
 // Layered LFOs over the static-feeling params. Writes go directly into the params
@@ -41,12 +46,14 @@ export default class Autopilot {
 	// - surge: the transition glides to the next preset in ~1.5s
 	// - flash: colors blow out THROUGH white with the drop flash, the new
 	//   palette reveals itself as it settles
-	// - dip: colors sink into darkness, then the new palette relights- a blink
 	// - wipe: the new palette grows in a circle from screen center to the edges
+	// - curtain: it rises from the bottom, riding the fall's upward stream
+	// - iris: it closes in from the edges- the world swallows the body last
+	// - dissolve: it eats the old palette along an FBM pattern- merging patches
 	skipToNext() {
 		const p = this.params.autopilot
 		let mode = p.dropMode
-		if (mode === 'random') mode = ['snap', 'snap', 'surge', 'flash', 'flash', 'dip', 'wipe', 'wipe'][Math.floor(Math.random() * 8)]
+		if (mode === 'random') mode = ['snap', 'snap', 'surge', 'flash', 'flash', 'wipe', 'wipe', 'curtain', 'iris', 'dissolve'][Math.floor(Math.random() * 10)]
 		if (mode === 'snap') {
 			p.preset = (p.preset + 1) % COLOR_PRESETS.length
 			this.transition = null   // a pending transition must not keep running
@@ -63,14 +70,16 @@ export default class Autopilot {
 			tr.t = Math.min(1, tr.t + dt / 1.5)
 			return tr.t * tr.t * (3 - 2 * tr.t)
 		}
-		if (tr.mode === 'wipe') {
-			// Ease-out: the circle bursts open then settles on the edges.
-			tr.t = Math.min(1, tr.t + dt / 1.4)
-			return 1 - (1 - tr.t) * (1 - tr.t)
+		const spatial = SPATIAL[tr.mode]
+		if (spatial) {
+			tr.t = Math.min(1, tr.t + dt / spatial.duration)
+			// Ease-out (fronts burst open then settle)- except the dissolve,
+			// whose organic threshold reads better advancing linearly.
+			return tr.mode === 'dissolve' ? tr.t : 1 - (1 - tr.t) * (1 - tr.t)
 		}
-		// flash (1.2s) and dip (1.5s): linear clock, the waypoint split in
-		// update() shapes the two phases.
-		tr.t = Math.min(1, tr.t + dt / (tr.mode === 'dip' ? 1.5 : 1.2))
+		// flash: linear 1.2s clock, the waypoint split in update() shapes the
+		// two phases.
+		tr.t = Math.min(1, tr.t + dt / 1.2)
 		return tr.t
 	}
 
@@ -115,21 +124,18 @@ export default class Autopilot {
 		if (this.transition) {
 			f = this.transitionMix(dt)
 			const mode = this.transition.mode
-			if (mode === 'wipe' && this.transition.t < 1) {
-				// Spatial: sky and clouds carry BOTH palettes with a growing front;
-				// the body sits at screen center, so it leads the wipe.
-				this.sky.setWipe(A, B, f)
-				this.clouds.setWipe(A, B, f)
-				this.body.lerpColors(A, B, Math.min(1, f * 1.6))
+			const spatial = SPATIAL[mode]
+			if (spatial && this.transition.t < 1) {
+				// Spatial: sky and clouds carry BOTH palettes with a moving front.
+				this.sky.setWipe(A, B, f, spatial.shaderMode)
+				this.clouds.setWipe(A, B, f, spatial.shaderMode)
+				this.body.lerpColors(A, B, spatial.body(f))
 				return
 			}
-			if (mode === 'flash' || mode === 'dip') {
-				// Through a waypoint: out over the first phase, reveal over the rest.
-				// flash blows out fast (35%); dip falls into black a bit slower (40%).
-				const waypoint = mode === 'flash' ? WHITE_PRESET : BLACK_PRESET
-				const split = mode === 'flash' ? 0.35 : 0.4
-				if (f < split) { B = waypoint; f = f / split }
-				else { A = waypoint; B = COLOR_PRESETS[nxt]; f = (f - split) / (1 - split) }
+			if (mode === 'flash') {
+				// Through white: blow out over the first 35%, reveal over the rest.
+				if (f < 0.35) { B = WHITE_PRESET; f = f / 0.35 }
+				else { A = WHITE_PRESET; B = COLOR_PRESETS[nxt]; f = (f - 0.35) / 0.65 }
 			}
 			if (this.transition.t >= 1) {
 				this.transition = null

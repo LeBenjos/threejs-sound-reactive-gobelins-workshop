@@ -21,6 +21,7 @@ export default {
 		shadowColorB: { value: new THREE.Color(0xbfbfbf) },
 		hazeColorB: { value: new THREE.Color(0xbfe1ff) },
 		wipe: { value: 0 },
+		wipeMode: { value: 0 },   // 0 circle · 1 curtain · 2 iris · 3 dissolve
 		aspect: { value: 1 },
 	},
 	vertexShader: /* glsl */`
@@ -64,6 +65,7 @@ export default {
 		uniform vec3 shadowColorB;
 		uniform vec3 hazeColorB;
 		uniform float wipe;
+		uniform float wipeMode;
 		uniform float aspect;
 		varying vec2 vUv;
 		varying vec3 vViewPos;
@@ -107,12 +109,27 @@ export default {
 			float seed = vSprite.x;
 			float noiseRot = vSprite.y;
 			float shadowMult = vSprite.z;
-			// Wipe transition: same screen-space metric as the sky shader, so the
-			// front crosses background and sprites as ONE circle.
-			vec2 ndc = vClip.xy / vClip.w;
-			float wd = length( vec2( ndc.x * aspect, ndc.y ) ) * 0.5;
-			float front = wipe * 1.25;
-			float wm = 1.0 - smoothstep( front - 0.18, front, wd );
+			// Spatial palette transitions: same screen-space metrics as the sky
+			// shader, so each front crosses background and sprites as ONE shape.
+			float wm = 0.0;
+			if ( wipe > 0.0 ) {
+				vec2 ndc = vClip.xy / vClip.w;
+				vec2 suv = ndc * 0.5 + 0.5;   // matches the sky's vUv
+				float wd = length( vec2( ndc.x * aspect, ndc.y ) ) * 0.5;
+				if ( wipeMode < 0.5 ) {          // circle bursting from center
+					float front = wipe * 1.25;
+					wm = 1.0 - smoothstep( front - 0.18, front, wd );
+				} else if ( wipeMode < 1.5 ) {   // curtain rising with the fall stream
+					float front = wipe * 1.3;
+					wm = 1.0 - smoothstep( front - 0.25, front, suv.y );
+				} else if ( wipeMode < 2.5 ) {   // inverse iris- closes on the center
+					float inner = ( 1.0 - wipe ) * 1.25 - 0.18;
+					wm = smoothstep( inner, inner + 0.18, wd );
+				} else {                         // organic FBM dissolve
+					float th = 1.05 - wipe * 1.2;
+					wm = smoothstep( th - 0.08, th + 0.08, fbm( vec2( suv.x * aspect, suv.y ) * 3.5 ) );
+				}
+			}
 			vec3 cloudColorM = mix( cloudColor, cloudColorB, wm );
 			vec3 shadowColorM = mix( shadowColor, shadowColorB, wm );
 			vec3 hazeColorM = mix( hazeColor, hazeColorB, wm );
