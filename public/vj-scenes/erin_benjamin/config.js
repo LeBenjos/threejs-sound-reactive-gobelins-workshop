@@ -75,7 +75,7 @@ export const COLOR_PRESETS = [
 		name: 'Aurora',
 		skyTop: new THREE.Color(0x05203f), skyBottom: new THREE.Color(0x129074),
 		skyCloudColor: new THREE.Color(0x96ffe4), cloudsColor: new THREE.Color(0x63f5cf),
-		bodyRim: new THREE.Color(0xffb35c),
+		bodyRim: new THREE.Color(0xff8c2e),
 	},
 	{
 		// Deep ocean night: near-black over drowned indigo, cold heavy clouds.
