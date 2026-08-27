@@ -71,6 +71,12 @@ export default class Gui {
 		auto.addBinding(params.autopilot, 'enabled')
 		auto.addBinding(params.autopilot, 'speed', { min: 0, max: 3, step: 0.01 })
 		auto.addBinding(params.autopilot, 'colorCycle', { label: 'couleurs sur les drops' })
+		// Fires the REAL drop path (flash + palette transition + camera accent)
+		// via the same rising edge the detector uses- for auditioning the
+		// transition styles without waiting for the music to provide drops.
+		auto.addButton({ title: '⚡ simuler un drop' }).on('click', () => {
+			features.dropPulse = 1
+		})
 		auto.addBinding(params.autopilot, 'dropMode', {
 			label: 'transition drop',
 			options: { 'aléatoire': 'random', 'coupure': 'snap', 'glissé': 'surge', 'flash blanc': 'flash', 'par beats': 'steps' },
