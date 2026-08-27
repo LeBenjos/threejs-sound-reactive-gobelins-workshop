@@ -21,19 +21,20 @@ export default class Autopilot {
 		this.presetTimer = 0
 	}
 
-	// Palette change on a musical drop, two flavors behind params.autopilot.dropSnap:
-	// - surge (default): the running transition races at 12x from exactly where
-	//   it is- smooth, ~1.5-2s- lands on the next preset, cycle resumes.
+	// Palette change on a musical drop- the ONLY thing that moves the palette
+	// (no timer cycle). Two flavors behind params.autopilot.dropSnap:
+	// - surge (default off): the transition animates from where it is and
+	//   completes in ~1.5s- smooth but clearly drop-bound.
 	// - snap: hard cut to the next preset, a deliberate color slam.
 	skipToNext() {
 		if (!this.params.autopilot.dropSnap) {
-			this.surge = 12
+			this.surging = true
 			return
 		}
 		const p = this.params.autopilot
 		p.preset = (p.preset + 1) % COLOR_PRESETS.length
 		this.presetTimer = 0
-		this.surge = 1   // a pending surge must not keep racing the cycle after the snap
+		this.surging = false   // a pending surge must not keep running after the snap
 		this.onPresetAdvanced?.(p.preset)
 	}
 
@@ -67,18 +68,19 @@ export default class Autopilot {
 
 		if (!p.autopilot.colorCycle) return
 
-		// Preset cycle: dwell `switchInterval` seconds on each preset, smooth-lerp to
-		// the next. `params.autopilot.preset` is the SOURCE OF TRUTH for the current
-		// preset and is advanced + reflected in the GUI dropdown as the cycle ticks-
-		// so the user always sees which preset is active. Manual dropdown picks reset
-		// the timer (resetPresetTimer) so the lerp starts fresh from the chosen one.
+		// The palette holds still- NO timer cycle. It only moves when a drop
+		// calls skipToNext(): a snap, or a surge that races the transition to
+		// completion in ~1.5s. `params.autopilot.preset` stays the source of
+		// truth, advanced + mirrored into the GUI dropdown as transitions land.
 		const interval = Math.max(0.5, p.autopilot.switchInterval)
-		this.presetTimer += dt * p.autopilot.speed * (this.surge ?? 1)
-		if (this.presetTimer >= interval) {
-			this.presetTimer -= interval
-			this.surge = 1   // the drop surge ends where the transition lands
-			p.autopilot.preset = (p.autopilot.preset + 1) % COLOR_PRESETS.length
-			this.onPresetAdvanced?.(p.autopilot.preset)
+		if (this.surging) {
+			this.presetTimer += dt * interval / 1.5
+			if (this.presetTimer >= interval) {
+				this.presetTimer = 0
+				this.surging = false
+				p.autopilot.preset = (p.autopilot.preset + 1) % COLOR_PRESETS.length
+				this.onPresetAdvanced?.(p.autopilot.preset)
+			}
 		}
 		const cur = p.autopilot.preset
 		const nxt = (cur + 1) % COLOR_PRESETS.length
