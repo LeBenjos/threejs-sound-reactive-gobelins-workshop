@@ -79,12 +79,18 @@ export default class PostFX {
 		// Capped at 0.92 (was 0.96): above that the trails stop reading as speed
 		// and smear the whole frame into radial mush during intense passages.
 		this.afterimagePass.uniforms.damp.value = Math.min(0.92, p.afterimage.dampBase + audio.kickHard * p.afterimage.kickHardMult * e)
-		// The lens pass carries both effects; a disabled one just zeroes its term.
+		// The lens pass carries all three effects; a disabled one just zeroes its
+		// term. The drop shockwave: the ring starts at screen center at the drop
+		// (dropPulse=1) and travels to the edges as the pulse fades- the palette
+		// change BURSTS out instead of just happening.
 		const u = this.lensPass.uniforms
 		u.strength.value = p.fisheye.enabled ? p.fisheye.strengthBase + e * p.fisheye.energyMult + audio.kickHard * p.fisheye.kickHardMult * e : 0
 		u.amount.value = p.rgbShift.enabled ? features.high * p.rgbShift.highMult : 0
 		u.angle.value = p.rgbShift.angle
-		this.lensPass.enabled = p.fisheye.enabled || p.rgbShift.enabled
+		u.shockR.value = (1 - features.dropPulse) * 1.3
+		u.shockAmp.value = features.dropPulse * p.drop.shock
+		u.aspect.value = this.camera.aspect
+		this.lensPass.enabled = p.fisheye.enabled || p.rgbShift.enabled || u.shockAmp.value > 0.0001
 	}
 
 	render(dt) {

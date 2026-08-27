@@ -46,7 +46,10 @@ export default class CameraRig {
 		// distance to the subject: a fixed world-space jitter that reads as a
 		// breeze on a wide shot is a violent judder at face/hand distance.
 		const dist = this.camera.position.distanceTo(this.lookScratch)
-		const amp = p.shake * features.energy * features.energy * (0.3 + 0.7 * features.pace) * Math.min(1, dist / 4.5)
+		const distScale = Math.min(1, dist / 4.5)
+		// The drop lands a single hard kick on top of the wind turbulence.
+		const amp = (p.shake * features.energy * features.energy * (0.3 + 0.7 * features.pace)
+			+ features.dropPulse * features.dropPulse * this.params.drop.kick * 0.05) * distScale
 		if (amp > 0.0001) {
 			const ts = t * features.rate   // jitter frequency rides the world rate as well
 			this.camera.position.x += (Math.sin(ts * 39.7) + Math.sin(ts * 23.3) * 0.6) * amp * 0.5

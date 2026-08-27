@@ -103,11 +103,12 @@ export default class SpeedLines {
 		const e = features.energy
 		// Quadratic gate: the layer only exists when the music pushes- and the
 		// mesh is fully hidden below the threshold, skipping all GPU work.
-		const opacity = p.enabled ? p.opacity * e * e : 0
+		// A drop bursts the streaks on regardless of the gate.
+		const opacity = p.enabled ? p.opacity * e * e + p.opacity * features.dropPulse : 0
 		this.mesh.visible = opacity >= 0.01
 		if (!this.mesh.visible) return
 		this.material.uniforms.globalOpacity.value = opacity
-		const speed = (p.speedBase + p.speedEnergyMult * e + features.flow * 8 * e) * features.rate
+		const speed = (p.speedBase + p.speedEnergyMult * e + features.flow * 8 * e) * features.rate * (1 + features.dropPulse * 1.5)
 		// Faster = longer streaks (motion-blur feel).
 		this.material.uniforms.stretch.value = 0.5 + speed * 0.09
 		const cx = camera.position.x

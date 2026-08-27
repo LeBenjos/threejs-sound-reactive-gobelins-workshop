@@ -77,6 +77,8 @@ export default class Gui {
 		auto.addButton({ title: '⚡ simuler un drop' }).on('click', () => {
 			features.dropPulse = 1
 		})
+		auto.addBinding(params.drop, 'shock', { min: 0, max: 0.2, step: 0.005, label: 'onde de choc' })
+		auto.addBinding(params.drop, 'kick', { min: 0, max: 3, step: 0.05, label: 'coup caméra' })
 		auto.addBinding(params.autopilot, 'dropMode', {
 			label: 'transition drop',
 			options: { 'aléatoire': 'random', 'coupure': 'snap', 'glissé': 'surge', 'flash blanc': 'flash', 'cercle centre': 'wipe', 'rideau montant': 'curtain', 'iris inversé': 'iris', 'dissolution': 'dissolve' },
