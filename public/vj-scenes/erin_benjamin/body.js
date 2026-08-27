@@ -22,10 +22,12 @@ const EVENT_TUNING = {
 	// Back-first fall: already a falling clip, so no limb mix needed- just a
 	// slow roll-over blend.
 	backfalling: { fade: 0.9 },
-	// Flat helicopter spin: slight flail bleed so it stays involuntary.
-	spin: { fade: 0.7, limbMix: 0.8 },
+	// Flat helicopter spin, one-shot at half speed: one graceful rotation
+	// (~3.2s), slight flail bleed so it stays involuntary.
+	spin: { fade: 0.7, timeScale: 0.5, limbMix: 0.8, returnFade: 0.9 },
 }
 const LIMB_RE = /Arm|Hand|Shoulder|Leg|Foot|Toe/i   // everything but Hips/Spine/Neck/Head
+const ONE_SHOTS = ['backflip', 'spin']   // play once, return by themselves
 
 // The falling character. `falling` loops as the base state; playEvent()
 // crossfades to a rare event clip (backflip one-shot, flying held) and back.
@@ -147,14 +149,17 @@ export default class Body {
 				this.actions.fallingHips = this.mixer.clipAction(
 					new THREE.AnimationClip('fallingHips', falling.duration, hipsTracks))
 			}
-			// backflip is a one-shot: clamp on the last frame while fading back
-			// (the 'finished' listener below triggers the return to falling).
-			if (this.actions.backflip) {
-				this.actions.backflip.setLoop(THREE.LoopOnce)
-				this.actions.backflip.clampWhenFinished = true
+			// One-shots (backflip, spin): clamp on the last frame while fading back-
+			// the 'finished' listener triggers the return to falling by itself.
+			for (const name of ONE_SHOTS) {
+				const action = this.actions[name]
+				if (!action) continue
+				action.setLoop(THREE.LoopOnce)
+				action.clampWhenFinished = true
 			}
 			this.mixer.addEventListener('finished', (e) => {
-				if (e.action === this.actions.backflip) this.endEvent(EVENT_TUNING.backflip.fade)
+				const name = ONE_SHOTS.find((n) => this.actions[n] === e.action)
+				if (name) this.endEvent(EVENT_TUNING[name]?.returnFade ?? EVENT_TUNING[name]?.fade ?? FADE)
 			})
 			this.actions.falling.play()
 			this.currentAction = this.actions.falling
