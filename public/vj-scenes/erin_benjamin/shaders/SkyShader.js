@@ -15,6 +15,12 @@ export default {
 		skyTop: { value: new THREE.Color(0x6fb4ff) },
 		skyBottom: { value: new THREE.Color(0xbfe1ff) },
 		cloudColor: { value: new THREE.Color(0xffffff) },
+		// Second palette + front for the 'wipe' transition: the new colors grow
+		// from screen center outward. wipe stays 0 outside transitions.
+		skyTopB: { value: new THREE.Color(0x6fb4ff) },
+		skyBottomB: { value: new THREE.Color(0xbfe1ff) },
+		cloudColorB: { value: new THREE.Color(0xffffff) },
+		wipe: { value: 0 },
 	},
 	vertexShader: /* glsl */`
 		varying vec2 vUv;
@@ -34,6 +40,10 @@ export default {
 		uniform vec3 skyTop;
 		uniform vec3 skyBottom;
 		uniform vec3 cloudColor;
+		uniform vec3 skyTopB;
+		uniform vec3 skyBottomB;
+		uniform vec3 cloudColorB;
+		uniform float wipe;
 		varying vec2 vUv;
 
 		float hash( vec2 p ) {
@@ -71,7 +81,17 @@ export default {
 			uv.x += panX;
 			uv.y -= time;
 
-			vec3 sky = mix( skyBottom, skyTop, vUv.y );
+			// Wipe transition: the B palette grows in a soft circle from screen
+			// center to the corners (aspect-corrected radius, front covers the
+			// farthest corner at wipe=1).
+			float wd = length( vec2( ( vUv.x - 0.5 ) * resolution.x / resolution.y, vUv.y - 0.5 ) );
+			float front = wipe * 1.25;
+			float wm = 1.0 - smoothstep( front - 0.18, front, wd );
+			vec3 topC = mix( skyTop, skyTopB, wm );
+			vec3 bottomC = mix( skyBottom, skyBottomB, wm );
+			vec3 cloudC = mix( cloudColor, cloudColorB, wm );
+
+			vec3 sky = mix( bottomC, topC, vUv.y );
 			// Two scales: the large one places cumulus masses, the fine one adds
 			// detail only INSIDE those masses (mass-modulated)- no more uniform
 			// full-screen grain. The mass field is domain-warped (it curls on
@@ -92,8 +112,8 @@ export default {
 			// color pulled toward skyTop), so the color cycle carries through.
 			float above = fbm( mw + vec2( 0.0, 0.12 * cloudScale * 0.35 ) );
 			float shadow = smoothstep( 0.0, 0.25, above - mass ) * 0.55;
-			vec3 shadowCol = mix( cloudColor, skyTop, 0.45 ) * 0.8;
-			vec3 cloudCol = mix( cloudColor * brightness, shadowCol, shadow );
+			vec3 shadowCol = mix( cloudC, topC, 0.45 ) * 0.8;
+			vec3 cloudCol = mix( cloudC * brightness, shadowCol, shadow );
 			vec3 col = mix( sky, cloudCol, clouds );
 			gl_FragColor = vec4( col, 1.0 );
 		}

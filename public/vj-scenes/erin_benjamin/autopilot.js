@@ -42,10 +42,11 @@ export default class Autopilot {
 	// - flash: colors blow out THROUGH white with the drop flash, the new
 	//   palette reveals itself as it settles
 	// - dip: colors sink into darkness, then the new palette relights- a blink
+	// - wipe: the new palette grows in a circle from screen center to the edges
 	skipToNext() {
 		const p = this.params.autopilot
 		let mode = p.dropMode
-		if (mode === 'random') mode = ['snap', 'snap', 'surge', 'flash', 'flash', 'dip'][Math.floor(Math.random() * 6)]
+		if (mode === 'random') mode = ['snap', 'snap', 'surge', 'flash', 'flash', 'dip', 'wipe', 'wipe'][Math.floor(Math.random() * 8)]
 		if (mode === 'snap') {
 			p.preset = (p.preset + 1) % COLOR_PRESETS.length
 			this.transition = null   // a pending transition must not keep running
@@ -61,6 +62,11 @@ export default class Autopilot {
 		if (tr.mode === 'surge') {
 			tr.t = Math.min(1, tr.t + dt / 1.5)
 			return tr.t * tr.t * (3 - 2 * tr.t)
+		}
+		if (tr.mode === 'wipe') {
+			// Ease-out: the circle bursts open then settles on the edges.
+			tr.t = Math.min(1, tr.t + dt / 1.4)
+			return 1 - (1 - tr.t) * (1 - tr.t)
 		}
 		// flash (1.2s) and dip (1.5s): linear clock, the waypoint split in
 		// update() shapes the two phases.
@@ -109,6 +115,14 @@ export default class Autopilot {
 		if (this.transition) {
 			f = this.transitionMix(dt)
 			const mode = this.transition.mode
+			if (mode === 'wipe' && this.transition.t < 1) {
+				// Spatial: sky and clouds carry BOTH palettes with a growing front;
+				// the body sits at screen center, so it leads the wipe.
+				this.sky.setWipe(A, B, f)
+				this.clouds.setWipe(A, B, f)
+				this.body.lerpColors(A, B, Math.min(1, f * 1.6))
+				return
+			}
 			if (mode === 'flash' || mode === 'dip') {
 				// Through a waypoint: out over the first phase, reveal over the rest.
 				// flash blows out fast (35%); dip falls into black a bit slower (40%).

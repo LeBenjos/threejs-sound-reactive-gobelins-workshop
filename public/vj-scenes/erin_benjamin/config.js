@@ -78,7 +78,7 @@ export function createDefaultParams() {
 		audio: { quiet: 0.25, loud: 0.75, attack: 0.4, release: 2.0, floor: 0.15, bpmSlow: 90, bpmFast: 165, rateMin: 0.7, rateMax: 1.3 },
 		// dropMode: palette transition style on a drop- 'random' draws one per
 		// drop among snap (hard cut), surge (1.5s glide), flash (through white)
-		// and dip (through black- a blink).
+		// dip (through black- a blink) and wipe (a circle from screen center).
 		autopilot: { enabled: true, speed: 0.5, colorCycle: true, preset: 0, dropMode: 'random' },
 		// Director (base flow + hard-kick accents): a hard kick punches to an
 		// accent shot when energy >= minEnergy, the cooldown has elapsed and the

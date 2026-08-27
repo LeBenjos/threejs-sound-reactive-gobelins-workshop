@@ -78,9 +78,23 @@ export default class Sky {
 	// With A===B and f=0 it just snaps to A.
 	lerpColors(A, B, f) {
 		const u = this.uniforms
+		u.wipe.value = 0
 		u.skyTop.value.copy(A.skyTop).lerp(B.skyTop, f)
 		u.skyBottom.value.copy(A.skyBottom).lerp(B.skyBottom, f)
 		u.cloudColor.value.copy(A.skyCloudColor).lerp(B.skyCloudColor, f)
+	}
+
+	// Wipe transition: both palettes live in the shader, the B set grows from
+	// screen center as `front` goes 0 → 1.
+	setWipe(A, B, front) {
+		const u = this.uniforms
+		u.skyTop.value.copy(A.skyTop)
+		u.skyBottom.value.copy(A.skyBottom)
+		u.cloudColor.value.copy(A.skyCloudColor)
+		u.skyTopB.value.copy(B.skyTop)
+		u.skyBottomB.value.copy(B.skyBottom)
+		u.cloudColorB.value.copy(B.skyCloudColor)
+		u.wipe.value = front
 	}
 
 	resize() {

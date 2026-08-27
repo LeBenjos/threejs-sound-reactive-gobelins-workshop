@@ -15,6 +15,13 @@ export default {
 		shadowColor: { value: new THREE.Color(0xbfbfbf) },   // kept in-palette by clouds.js (preset skyTop pull)
 		hazeColor: { value: new THREE.Color(0xbfe1ff) },     // the preset's horizon- lerped with the color cycle
 		hazeAmount: { value: 0.7 },
+		// Second palette + front for the 'wipe' transition (see SkyShader)-
+		// wipe stays 0 outside transitions.
+		cloudColorB: { value: new THREE.Color(0xffffff) },
+		shadowColorB: { value: new THREE.Color(0xbfbfbf) },
+		hazeColorB: { value: new THREE.Color(0xbfe1ff) },
+		wipe: { value: 0 },
+		aspect: { value: 1 },
 	},
 	vertexShader: /* glsl */`
 		attribute vec3 aOffset;
@@ -25,6 +32,7 @@ export default {
 		varying vec3 vViewPos;
 		varying vec3 vSprite;
 		varying float vFade;
+		varying vec4 vClip;
 		void main() {
 			vUv = uv;
 			vSprite = aSprite;
@@ -42,6 +50,7 @@ export default {
 			vec4 mv = viewMatrix * vec4( world, 1.0 );
 			vViewPos = mv.xyz;
 			gl_Position = projectionMatrix * mv;
+			vClip = gl_Position;
 		}
 	`,
 	fragmentShader: /* glsl */`
@@ -51,10 +60,16 @@ export default {
 		uniform vec3 shadowColor;
 		uniform vec3 hazeColor;
 		uniform float hazeAmount;
+		uniform vec3 cloudColorB;
+		uniform vec3 shadowColorB;
+		uniform vec3 hazeColorB;
+		uniform float wipe;
+		uniform float aspect;
 		varying vec2 vUv;
 		varying vec3 vViewPos;
 		varying vec3 vSprite;
 		varying float vFade;
+		varying vec4 vClip;
 
 		float hash( vec2 p ) {
 			return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 );
@@ -92,6 +107,15 @@ export default {
 			float seed = vSprite.x;
 			float noiseRot = vSprite.y;
 			float shadowMult = vSprite.z;
+			// Wipe transition: same screen-space metric as the sky shader, so the
+			// front crosses background and sprites as ONE circle.
+			vec2 ndc = vClip.xy / vClip.w;
+			float wd = length( vec2( ndc.x * aspect, ndc.y ) ) * 0.5;
+			float front = wipe * 1.25;
+			float wm = 1.0 - smoothstep( front - 0.18, front, wd );
+			vec3 cloudColorM = mix( cloudColor, cloudColorB, wm );
+			vec3 shadowColorM = mix( shadowColor, shadowColorB, wm );
+			vec3 hazeColorM = mix( hazeColor, hazeColorB, wm );
 			vec2 p = vUv - 0.5;
 			vec2 seedOff = vec2( seed * 7.3, seed * 2.1 );
 			// Per-sprite rotation of the noise domain- breaks the clone look
@@ -117,18 +141,18 @@ export default {
 			float above = fbm2( w + vec2( -sa, ca ) * 0.48 + ( warp - 0.5 ) * 1.4 );
 			float delta = n - above;
 			float shadow = min( 1.0, ( smoothstep( 0.0, 0.3, -delta ) * 0.6 + ( 1.0 - vUv.y ) * 0.25 ) * shadowMult );
-			vec3 col = mix( cloudColor, shadowColor, shadow );
+			vec3 col = mix( cloudColorM, shadowColorM, shadow );
 			// Silver lining: where density drops toward the light (delta > 0) the
 			// top edge catches it- pushed toward white so it reads as sun, echoing
 			// the body's rim language.
 			float lining = smoothstep( 0.1, 0.4, delta ) * ( 1.0 - shadow );
-			col += mix( cloudColor, vec3( 1.0 ), 0.5 ) * lining * 0.3;
+			col += mix( cloudColorM, vec3( 1.0 ), 0.5 ) * lining * 0.3;
 			// Aerial perspective: distant sprites melt toward the preset's horizon
 			// color and thin out- the depth turns milky instead of staying crisp
 			// to the last layer. THE dreamy ingredient.
 			float dist = length( vViewPos );
 			float haze = smoothstep( 25.0, 110.0, dist ) * hazeAmount;
-			col = mix( col, hazeColor, haze );
+			col = mix( col, hazeColorM, haze );
 			// The close camera shots orbit INSIDE the near cloud band, so sprites
 			// can cross the lens: without this they pop in as huge dark blobs the
 			// instant the billboard flips past the camera. Dissolve them over the

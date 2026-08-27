@@ -105,12 +105,26 @@ export default class Clouds {
 	// The underside tint pulls the cloud color toward the preset's skyTop (same
 	// rule as the sky shader), so sprites and background share one light.
 	lerpColors(A, B, f) {
+		const u = this.material.uniforms
+		u.wipe.value = 0
 		const mixed = this.mixScratch.copy(A.cloudsColor).lerp(B.cloudsColor, f)
-		this.material.uniforms.cloudColor.value.copy(mixed)
-		this.material.uniforms.shadowColor.value
-			.copy(A.skyTop).lerp(B.skyTop, f).lerp(mixed, 0.55).multiplyScalar(0.8)
+		u.cloudColor.value.copy(mixed)
+		u.shadowColor.value.copy(A.skyTop).lerp(B.skyTop, f).lerp(mixed, 0.55).multiplyScalar(0.8)
 		// Distant sprites melt toward the horizon color (aerial perspective).
-		this.material.uniforms.hazeColor.value.copy(A.skyBottom).lerp(B.skyBottom, f)
+		u.hazeColor.value.copy(A.skyBottom).lerp(B.skyBottom, f)
+	}
+
+	// Wipe transition: both palettes live in the shader, the B set grows from
+	// screen center as `front` goes 0 → 1 (same metric as the sky).
+	setWipe(A, B, front) {
+		const u = this.material.uniforms
+		u.cloudColor.value.copy(A.cloudsColor)
+		u.shadowColor.value.copy(A.skyTop).lerp(A.cloudsColor, 0.55).multiplyScalar(0.8)
+		u.hazeColor.value.copy(A.skyBottom)
+		u.cloudColorB.value.copy(B.cloudsColor)
+		u.shadowColorB.value.copy(B.skyTop).lerp(B.cloudsColor, 0.55).multiplyScalar(0.8)
+		u.hazeColorB.value.copy(B.skyBottom)
+		u.wipe.value = front
 	}
 
 	update(dt, audio, features, camera) {
@@ -137,6 +151,7 @@ export default class Clouds {
 		// translucent accents instead of stacking a second wall over the FBM sky.
 		this.material.uniforms.opacity.value = p.opacity * (1 - 0.25 * features.energy)
 		this.material.uniforms.hazeAmount.value = p.haze
+		this.material.uniforms.aspect.value = camera.aspect   // wipe's screen metric
 		// Placid billows when calm, boiling on the drops.
 		this.churn += dt * (0.06 + features.energy * 0.3)
 		this.material.uniforms.time.value = this.churn
