@@ -35,7 +35,7 @@ export default class AudioFeatures {
 		this.dipAgo = 9      // seconds since the signal left the dip
 		this.timelineActive = false   // set each frame by DropTimeline- true = it owns the drops
 		this.dropIn = Infinity        // seconds to the next mapped drop (anticipation hook)
-		this.debugDrops = true   // console gate-traces for missed-drop hunting- flip off once tuned
+		this.debugDrops = false   // console gate-traces for missed-drop hunting- flip on to tune
 		this._dbgTimer = 0
 		this._dbgWasHot = false
 		this._dbgPrevBass = 0
