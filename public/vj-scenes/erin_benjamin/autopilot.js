@@ -71,7 +71,7 @@ export default class Autopilot {
 	skipToNext() {
 		const p = this.params.autopilot
 		let mode = p.dropMode
-		if (mode === 'random') mode = ['snap', 'snap', 'flash', 'flash', 'wipe', 'wipe', 'curtain', 'iris', 'dissolve'][Math.floor(Math.random() * 9)]
+		if (mode === 'random') mode = ['snap', 'flash', 'wipe', 'curtain', 'iris', 'dissolve'][Math.floor(Math.random() * 6)]
 		if (mode === 'snap') {
 			p.preset = this.pickNext(p.preset)
 			this.transition = null   // a pending transition must not keep running
