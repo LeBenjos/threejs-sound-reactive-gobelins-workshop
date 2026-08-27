@@ -38,6 +38,13 @@ export default class CameraRig {
 		const p = this.params.camera
 		this.feelTime = (this.feelTime ?? 0) + dt
 		const t = this.feelTime
+		// Drop zoom punch: the lens snaps tighter on the hit, springs back with
+		// the pulse. 50 is the rig's base fov.
+		const fov = 50 - features.dropPulse * features.dropPulse * this.params.drop.punch * 14
+		if (fov !== this.camera.fov) {
+			this.camera.fov = fov
+			this.camera.updateProjectionMatrix()
+		}
 		const roll = Math.sin(t * p.rollSpeed * Math.PI * 2) * p.rollAmp * (0.4 + 0.6 * features.energy)
 		this.camera.rotateZ(roll)
 		this.camera.userData.roll = roll   // read by Sky- the background rolls with the horizon

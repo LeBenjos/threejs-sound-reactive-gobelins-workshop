@@ -78,7 +78,9 @@ export default class PostFX {
 		this.afterimagePass.enabled = p.afterimage.enabled
 		// Capped at 0.92 (was 0.96): above that the trails stop reading as speed
 		// and smear the whole frame into radial mush during intense passages.
-		this.afterimagePass.uniforms.damp.value = Math.min(0.92, p.afterimage.dampBase + audio.kickHard * p.afterimage.kickHardMult * e)
+		// The drop burst may exceed the usual 0.92 smear cap- explosion trails.
+		this.afterimagePass.uniforms.damp.value = Math.min(0.95,
+			Math.min(0.92, p.afterimage.dampBase + audio.kickHard * p.afterimage.kickHardMult * e) + features.dropPulse * 0.12)
 		// The lens pass carries all three effects; a disabled one just zeroes its
 		// term. The drop shockwave: the ring starts at screen center at the drop
 		// (dropPulse=1) and travels to the edges as the pulse fades- the palette

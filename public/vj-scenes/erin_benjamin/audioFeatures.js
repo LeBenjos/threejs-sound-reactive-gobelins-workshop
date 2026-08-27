@@ -111,6 +111,10 @@ export default class AudioFeatures {
 			this.quietTime = 0
 		}
 		this.dropPulse = Math.max(0, this.dropPulse - dt * 1.5)
+		// Impact frame: the whole world (rate drives everything that moves)
+		// freezes for the first ~80ms of the drop hit, then blasts back- the
+		// breath before the explosion.
+		if (this.dropPulse > 0.88) this.rate *= 0.08
 	}
 
 }

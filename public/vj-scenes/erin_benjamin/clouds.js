@@ -150,7 +150,9 @@ export default class Clouds {
 		const baseDy = dt * features.rate * baseRise
 		// Sprites ease back as the energy rises: at full intensity they streak as
 		// translucent accents instead of stacking a second wall over the FBM sky.
-		this.material.uniforms.opacity.value = p.opacity * (1 - 0.25 * features.energy)
+		// The drop's blast wave thins the field for an instant (it re-forms as
+		// the pulse fades)- with the lens shockwave it reads as blown apart.
+		this.material.uniforms.opacity.value = p.opacity * (1 - 0.25 * features.energy) * (1 - 0.5 * features.dropPulse)
 		this.material.uniforms.hazeAmount.value = p.haze
 		this.material.uniforms.aspect.value = camera.aspect   // wipe's screen metric
 		// Placid billows when calm, boiling on the drops.

@@ -46,7 +46,9 @@ export default {
 				// and the chromatic split rides the wave.
 				float d = length( vec2( c.x * aspect, c.y ) );
 				vec2 rd = d < 1e-4 ? vec2( 0.0 ) : c / d;
-				float ring = exp( -pow( ( d - shockR ) * 11.0, 2.0 ) );
+				// Main front + a trailing echo at half amplitude: double detonation.
+				float ring = exp( -pow( ( d - shockR ) * 11.0, 2.0 ) )
+					+ 0.45 * exp( -pow( ( d - shockR * 0.55 ) * 11.0, 2.0 ) );
 				uv = clamp( uv + rd * ring * shockAmp, 0.0, 1.0 );
 				chroma = rd * ring * shockAmp * 0.5;
 			}
