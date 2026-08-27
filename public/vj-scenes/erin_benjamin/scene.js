@@ -119,8 +119,7 @@ export default class ErinBenjaminScene {
 		this.dropTimeline.update(this.features)
 		this.features.update(dt, a)
 		this.wind.update(dt, this.features)   // writes params.wind.angle- sky/clouds/lines read it below
-		// Events before the body: they own features.freeze (bullet time), which
-		// must gate the mixer in the SAME frame it changes.
+		// Musical events: rare animation triggers + their camera staging.
 		this.events.update(dt, a, this.features)
 		// Inspection mode: the world modules follow the debug camera instead of
 		// the rig's, and the postfx chain is bypassed (raw render + rig frustum).

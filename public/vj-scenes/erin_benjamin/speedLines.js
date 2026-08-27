@@ -112,7 +112,7 @@ export default class SpeedLines {
 		this.mesh.visible = opacity >= 0.01
 		if (!this.mesh.visible) return
 		this.material.uniforms.globalOpacity.value = opacity
-		const speed = (p.speedBase + p.speedEnergyMult * e + features.flow * 8 * e) * features.rate * features.freeze * (1 + features.dropPulse * 1.5)
+		const speed = (p.speedBase + p.speedEnergyMult * e + features.flow * 8 * e) * features.rate * (1 + features.dropPulse * 1.5)
 		// Faster = longer streaks (motion-blur feel).
 		this.material.uniforms.stretch.value = 0.5 + speed * 0.09
 		const cx = camera.position.x

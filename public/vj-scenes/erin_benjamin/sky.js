@@ -50,7 +50,7 @@ export default class Sky {
 		const base = p.scrollSpeedBase * (floor + (1 - floor) * features.energy)
 		// Hard ceiling at 0.15 screen/s: whatever the GUI sliders say, the
 		// infinitely-far background can never rush- distance IS slowness.
-		const scrollStep = dt * features.freeze * Math.min(0.15, features.rate * (base + features.energy * p.scrollEnergyMult + features.flow * p.scrollKickMult * features.energy))
+		const scrollStep = dt * Math.min(0.15, features.rate * (base + features.energy * p.scrollEnergyMult + features.flow * p.scrollKickMult * features.energy))
 		// THE backdrop contract (final): its own motion is the upward fall
 		// stream, nothing else- flow.x is frozen forever. The ONE camera
 		// coupling it keeps is the view yaw: looking elsewhere pans the

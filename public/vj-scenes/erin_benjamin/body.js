@@ -209,7 +209,7 @@ export default class Body {
 			// The fall follows the track's tempo AND its intensity: a breakdown
 			// suspends the body in slow motion, the drop releases it full speed.
 			const s = this.params.body.slowMo
-			this.mixer.timeScale = features.rate * (s + (1 - s) * features.energy) * features.freeze
+			this.mixer.timeScale = features.rate * (s + (1 - s) * features.energy)
 			this.mixer.update(dt)
 			// A crossfaded-out action stays scheduled and keeps sampling its
 			// tracks at weight zero- release it once its fade has landed. The

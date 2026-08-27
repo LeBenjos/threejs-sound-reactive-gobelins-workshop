@@ -186,7 +186,7 @@ export default class Gui {
 
 		const events = this.pane.addFolder({ title: 'Events', expanded: false })
 		events.addBinding(this.scene.events.state, 'last', { readonly: true })
-		events.addButton({ title: '🤸 backflip (+ bullet time)' }).on('click', () => this.scene.events.trigger('backflip'))
+		events.addButton({ title: '🤸 backflip' }).on('click', () => this.scene.events.trigger('backflip'))
 		events.addButton({ title: '🔄 backfalling' }).on('click', () => this.scene.events.trigger('backfalling'))
 		events.addBinding(params.events, 'enabled')
 		events.addBinding(params.events, 'chance', { min: 0, max: 1, step: 0.05 })

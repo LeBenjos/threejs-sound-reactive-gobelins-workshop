@@ -102,10 +102,7 @@ export default class CameraRig {
 		// Impulses are gated by the passage energy: no whip-pans during quiet
 		// sections. Vertical motion: slow sine bob + energy push. lookAt(0,0,0)
 		// is fixed so the body stays framed.
-		// Bullet time: the world stands still (features.freeze), the camera does
-		// NOT- it carves around the suspended body with an extra sweep.
-		const sweep = features.freeze < 0.5 ? 0.9 : 0
-		this.orbit.angle += dt * this.orbitDir * (features.rate * (p.baseSpeed * this.shotSpeedMult + features.flow * p.kickMult * features.energy) + sweep)
+		this.orbit.angle += dt * features.rate * this.orbitDir * (p.baseSpeed * this.shotSpeedMult + features.flow * p.kickMult * features.energy)
 		this.orbit.verticalPhase += dt * p.verticalSpeed
 		const { angle, radius, baseHeight, verticalPhase } = this.orbit
 		const bob = (Math.sin(verticalPhase) * p.verticalAmp + features.energy * p.verticalEnergyMult) * this.shotBobMult

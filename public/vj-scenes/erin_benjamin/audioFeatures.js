@@ -21,7 +21,6 @@ export default class AudioFeatures {
 		this.pace = 0.5   // bpm normalized between bpmSlow..bpmFast, eased
 		this.rate = 1     // global world-speed multiplier derived from pace
 		this.dropPulse = 0   // 1 on a detected drop, decays over ~0.7s
-		this.freeze = 1      // world-speed gate for bullet time (events.js)- the CAMERA ignores it
 		this.quietTime = 0   // seconds spent below the quiet threshold
 		this.riseTime = 0    // seconds since the energy left the quiet zone
 		this.hotTime = 0     // seconds the INSTANT signal has been hot
