@@ -28,6 +28,18 @@ export default class MusicEvents {
 		this.state = { last: '-' }   // GUI monitor binds to this
 	}
 
+	// Manual trigger (GUI test buttons): the full real path- bullet-time arming,
+	// camera staging, monitor- bypassing only the chance roll and the cooldown.
+	trigger(name) {
+		const ev = EVENTS.find((e) => e.name === name)
+		if (!ev) return
+		const hold = Array.isArray(ev.hold) ? rand(ev.hold[0], ev.hold[1]) : ev.hold
+		if (!this.body.playEvent(name, hold)) return
+		if (name === 'backflip') this.bulletIn = 1.3
+		this.state.last = name
+		if (this.director.mode === 'base') this.director.enterAccent(0.8)
+	}
+
 	update(dt, audio, features) {
 		const p = this.params.events
 		// Bullet time: mid-backflip, the WORLD freezes for ~0.8s while the

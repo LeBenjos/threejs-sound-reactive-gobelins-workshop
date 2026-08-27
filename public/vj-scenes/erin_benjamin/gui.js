@@ -172,6 +172,8 @@ export default class Gui {
 
 		const director = this.pane.addFolder({ title: 'Director', expanded: false })
 		director.addBinding(this.scene.director.state, 'shot', { readonly: true })
+		director.addButton({ title: '🎬 cut accent' }).on('click', () => this.scene.director.enterAccent(features.energy))
+		director.addButton({ title: '📸 strobe' }).on('click', () => this.scene.director.strobe(features.energy))
 		director.addBinding(params.director, 'enabled')
 		director.addBinding(params.director, 'accentChance', { min: 0, max: 1, step: 0.05 })
 		director.addBinding(params.director, 'accentCooldown', { min: 0, max: 20, step: 0.5 })
@@ -184,6 +186,8 @@ export default class Gui {
 
 		const events = this.pane.addFolder({ title: 'Events', expanded: false })
 		events.addBinding(this.scene.events.state, 'last', { readonly: true })
+		events.addButton({ title: '🤸 backflip (+ bullet time)' }).on('click', () => this.scene.events.trigger('backflip'))
+		events.addButton({ title: '🔄 backfalling' }).on('click', () => this.scene.events.trigger('backfalling'))
 		events.addBinding(params.events, 'enabled')
 		events.addBinding(params.events, 'chance', { min: 0, max: 1, step: 0.05 })
 		events.addBinding(params.events, 'cooldown', { min: 0, max: 60, step: 1 })
