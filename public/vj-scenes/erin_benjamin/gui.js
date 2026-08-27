@@ -94,7 +94,7 @@ export default class Gui {
 		auto.addBinding(params.drop, 'punch', { min: 0, max: 3, step: 0.05, label: 'zoom punch' })
 		auto.addBinding(params.autopilot, 'dropMode', {
 			label: 'transition drop',
-			options: { 'aléatoire': 'random', 'coupure': 'snap', 'glissé': 'surge', 'flash blanc': 'flash', 'cercle centre': 'wipe', 'rideau montant': 'curtain', 'iris inversé': 'iris', 'dissolution': 'dissolve' },
+			options: { 'aléatoire': 'random', 'coupure': 'snap', 'flash blanc': 'flash', 'cercle centre': 'wipe', 'rideau montant': 'curtain', 'iris inversé': 'iris', 'dissolution': 'dissolve' },
 		})
 		// Manual preset selector- overridden live when colorCycle is on (the cycle
 		// keeps writing into the uniforms each frame).

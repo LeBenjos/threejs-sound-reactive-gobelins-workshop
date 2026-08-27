@@ -62,7 +62,6 @@ export default class Autopilot {
 	// Palette change on a musical drop- the ONLY thing that moves the palette.
 	// dropMode picks the style ('random' draws one per drop):
 	// - snap: hard cut to the next preset, a deliberate color slam
-	// - surge: the transition glides to the next preset in ~1.5s
 	// - flash: colors blow out THROUGH white with the drop flash, the new
 	//   palette reveals itself as it settles
 	// - wipe: the new palette grows in a circle from screen center to the edges
@@ -72,7 +71,7 @@ export default class Autopilot {
 	skipToNext() {
 		const p = this.params.autopilot
 		let mode = p.dropMode
-		if (mode === 'random') mode = ['snap', 'snap', 'surge', 'flash', 'flash', 'wipe', 'wipe', 'curtain', 'iris', 'dissolve'][Math.floor(Math.random() * 10)]
+		if (mode === 'random') mode = ['snap', 'snap', 'flash', 'flash', 'wipe', 'wipe', 'curtain', 'iris', 'dissolve'][Math.floor(Math.random() * 9)]
 		if (mode === 'snap') {
 			p.preset = this.pickNext(p.preset)
 			this.transition = null   // a pending transition must not keep running
@@ -87,10 +86,6 @@ export default class Autopilot {
 	// Advance the running transition; returns the current mix factor (0..1).
 	transitionMix(dt) {
 		const tr = this.transition
-		if (tr.mode === 'surge') {
-			tr.t = Math.min(1, tr.t + dt / 1.5)
-			return tr.t * tr.t * (3 - 2 * tr.t)
-		}
 		const spatial = SPATIAL[tr.mode]
 		if (spatial) {
 			tr.t = Math.min(1, tr.t + dt / spatial.duration)

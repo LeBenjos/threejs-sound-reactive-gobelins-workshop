@@ -140,7 +140,7 @@ export function createDefaultParams() {
 		// is the resulting world-speed multiplier applied scene-wide.
 		audio: { quiet: 0.25, loud: 0.75, attack: 0.4, release: 2.0, floor: 0.15, bpmSlow: 90, bpmFast: 165, rateMin: 0.7, rateMax: 1.3 },
 		// dropMode: palette transition style on a drop- 'random' draws one per
-		// drop among snap (hard cut), surge (1.5s glide), flash (through white)
+		// drop among snap (hard cut), flash (through white)
 		// and the spatial fronts: wipe (circle from center), curtain (rising),
 		// iris (closing from the edges), dissolve (FBM-eaten).
 		autopilot: { enabled: true, speed: 0.5, colorCycle: true, preset: 0, dropMode: 'random' },
