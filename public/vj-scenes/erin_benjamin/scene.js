@@ -16,6 +16,7 @@ import PostFX from './postfx.js'
 import Rays from './rays.js'
 import Sky from './sky.js'
 import SpeedLines from './speedLines.js'
+import Wind from './wind.js'
 
 // Orchestrator: owns the renderer + the shared params tree, wires the modules
 // together and drives the Analyzer lifecycle (load → init/warmup → play/stop).
@@ -26,6 +27,7 @@ export default class ErinBenjaminScene {
 		this.params = createDefaultParams()
 		this.features = new AudioFeatures(this.params)
 		this.dropTimeline = new DropTimeline(audio)   // early: the overrides fetch starts now
+		this.wind = new Wind(this.params)
 		this.body = new Body(this.params)
 		this.renderer = null
 		this.scene = null
@@ -116,6 +118,7 @@ export default class ErinBenjaminScene {
 		// the live detector down while it owns the current track.
 		this.dropTimeline.update(this.features)
 		this.features.update(dt, a)
+		this.wind.update(dt, this.features)   // writes params.wind.angle- sky/clouds/lines read it below
 		// Inspection mode: the world modules follow the debug camera instead of
 		// the rig's, and the postfx chain is bypassed (raw render + rig frustum).
 		const cam = this.debugView?.enabled ? this.debugView.camera : this.cameraRig.camera
@@ -129,7 +132,10 @@ export default class ErinBenjaminScene {
 		this.pivot.scale.setScalar(1 + this.features.bass * this.params.body.bassScale)
 		this.driftPhase = (this.driftPhase ?? 0) + dt
 		const drift = this.params.body.drift
-		this.pivot.position.set(Math.sin(this.driftPhase * 0.31) * drift, 0, Math.sin(this.driftPhase * 0.23 + 1.3) * drift)
+		// The body rides the same wind as the clouds (world +X axis): gusts and
+		// the pre-drop lean push the character too- one weather for everyone.
+		const windLean = Math.sin(THREE.MathUtils.degToRad(this.params.wind.angle)) * 0.9
+		this.pivot.position.set(Math.sin(this.driftPhase * 0.31) * drift + windLean, 0, Math.sin(this.driftPhase * 0.23 + 1.3) * drift)
 		// A detected drop is a MOMENT: hard palette switch + camera accent (the
 		// flash itself rides features.dropPulse inside sky/bloom/rim).
 		if (this.features.dropPulse > 0.9 && this.prevDropPulse <= 0.9) {

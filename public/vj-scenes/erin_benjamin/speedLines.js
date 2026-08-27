@@ -12,21 +12,25 @@ const StreakShader = {
 	uniforms: {
 		globalOpacity: { value: 0 },
 		stretch: { value: 1 },   // speed-driven length multiplier
+		windDir: { value: new THREE.Vector3(0, 1, 0) },   // filament axis = velocity direction (wind test knob)
 	},
 	vertexShader: /* glsl */`
 		attribute vec3 aOffset;
 		attribute vec2 aDim;   // x: width · y: base length
 		uniform float stretch;
+		uniform vec3 windDir;
 		varying vec2 vUv;
 		void main() {
 			vUv = uv;
-			// World-vertical filament, yaw-billboarded toward the camera.
+			// Filament along the WIND axis (vertical when the wind is off)- a
+			// streak IS a velocity vector, so its orientation must follow the
+			// motion. Yaw-billboarded toward the camera.
 			vec3 fwd = cameraPosition - aOffset;
 			vec3 planar = vec3( fwd.z, 0.0, -fwd.x );
 			// Degenerate when the camera sits exactly above the streak- any
 			// horizontal right works there (the filament is a vertical line).
 			vec3 right = length( planar ) < 1e-4 ? vec3( 1.0, 0.0, 0.0 ) : normalize( planar );
-			vec3 world = aOffset + right * position.x * aDim.x + vec3( 0.0, 1.0, 0.0 ) * position.y * aDim.y * stretch;
+			vec3 world = aOffset + right * position.x * aDim.x + windDir * position.y * aDim.y * stretch;
 			gl_Position = projectionMatrix * viewMatrix * vec4( world, 1.0 );
 		}
 	`,
@@ -114,10 +118,19 @@ export default class SpeedLines {
 		const cx = camera.position.x
 		const cy = camera.position.y
 		const cz = camera.position.z
+		// Wind (test knob): motion AND filament orientation lean together, on
+		// the same WORLD-fixed azimuth (+X) as the cloud field- streaks are
+		// velocity vectors, they must agree with the clouds' trajectories.
+		const windRad = (this.params.wind.angle * Math.PI) / 180
+		const windX = Math.sin(windRad)
+		const windY = Math.cos(windRad)
+		this.material.uniforms.windDir.value.set(windX, windY, 0)
 		const count = this.mults.length
 		let recycled = false
 		for (let i = 0; i < count; i++) {
-			let y = this.offsets[i * 3 + 1] + dt * speed * this.mults[i]
+			const step = dt * speed * this.mults[i]
+			this.offsets[i * 3] += step * windX
+			let y = this.offsets[i * 3 + 1] + step * windY
 			if (y > cy + 10) {
 				this.spawn(i, cx, cz)
 				y = cy - 10 - Math.random() * 4

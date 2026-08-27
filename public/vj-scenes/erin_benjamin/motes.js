@@ -118,10 +118,18 @@ export default class Motes {
 		// are weightless specks) but clearly directional, scaled by tempo and
 		// energy like everything else that moves.
 		const rise = p.rise * features.rate * (0.4 + 1.6 * features.energy)
+		// Same wind as the clouds/streaks (world +X axis)- weightless dust is
+		// the FIRST thing a gust should visibly carry, amplified 1.6x so the
+		// pre-drop lean and the slam sweep the specks hardest of all.
+		const windRad = (this.params.wind.angle * Math.PI) / 180
+		const windY = Math.cos(windRad)
+		const windLat = Math.sin(windRad) * 1.6
 		const count = this.seeds.length
 		let recycled = false
 		for (let i = 0; i < count; i++) {
-			let y = this.offsets[i * 3 + 1] + dt * rise * (0.6 + this.seeds[i])
+			const step = dt * rise * (0.6 + this.seeds[i])
+			this.offsets[i * 3] += step * windLat
+			let y = this.offsets[i * 3 + 1] + step * windY
 			if (y > cy + 6) {
 				this.spawn(i, cx, cz)
 				y = cy - 6

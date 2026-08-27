@@ -178,11 +178,21 @@ export default class Clouds {
 			+ 0.4 * Math.sin(this.weatherTime * Math.PI * 2 / 47 + this.weatherPhase2)
 		const density = 1 - (p.weather ?? 1) * 0.45 * (1 - wave)
 
+		// Wind (test knob): WORLD-fixed azimuth (+X)- a camera-relative lateral
+		// swirled with the orbit and integrated to nothing on world objects.
+		// And the lateral speed is UNIFORM across layers: wind pushes every
+		// cloud at the same world speed whatever its distance- speedMult is a
+		// parallax factor for the RISE only. 0 = pure vertical rise.
+		const windRad = (this.params.wind.angle * Math.PI) / 180
+		const windY = Math.cos(windRad)
+		const latStep = baseDy * Math.sin(windRad)
+
 		const count = this.layerOf.length
 		let recycled = false
 		for (let i = 0; i < count; i++) {
 			const layer = CLOUD_LAYERS[this.layerOf[i]]
-			let y = this.offsets[i * 3 + 1] + baseDy * layer.speedMult
+			this.offsets[i * 3] += latStep
+			let y = this.offsets[i * 3 + 1] + baseDy * layer.speedMult * windY
 			if (y > layer.yRange) {
 				this.spawn(i)
 				y = -layer.yRange

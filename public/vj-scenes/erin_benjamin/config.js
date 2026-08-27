@@ -158,6 +158,11 @@ export function createDefaultParams() {
 		// THE master perf lever: cap on the devicePixelRatio used by the whole
 		// render chain- fragment cost scales with its SQUARE (2 → 1.5 ≈ -44%).
 		quality: { renderScale: 2 },
+		// Global wind- leans the whole fall (sky flow, sprite rise, streaks,
+		// body drift) by this angle from vertical. auto = the Wind director
+		// drives it (drop anticipation + impact gusts + energy weave); off =
+		// the GUI slider owns it. 0 = the pure vertical contract.
+		wind: { angle: 0, auto: true },
 		// Rare animation events (backflip / backfalling): low chance + long
 		// cooldown on the hard kicks ⇒ roughly one event every 1.5-2.5 min.
 		// Rarity is the point.

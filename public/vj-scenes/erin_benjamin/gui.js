@@ -41,6 +41,14 @@ export default class Gui {
 		this.pane.addBinding(this.scene.director.state, 'shot', { readonly: true, label: 'shot en cours' })
 		this.pane.addBinding(this.scene.events.state, 'last', { readonly: true, label: 'dernier event' })
 
+		// Wind test knob- leans the whole fall (sky, clouds, streaks), degrees
+		// from vertical, screen-coherent. 0 = the pure vertical contract.
+		const windFolder = this.pane.addFolder({ title: 'Wind' })
+		windFolder.addBinding(params.wind, 'auto', { label: 'directeur auto' })
+		// Manual when auto is off; while auto runs, the director overwrites the
+		// value each frame (the slider then shows its last drawn state only).
+		windFolder.addBinding(params.wind, 'angle', { min: -60, max: 60, step: 1, label: 'angle (°)' })
+
 		// THE master perf slider- render resolution cap (see PostFX.setRenderScale).
 		this.pane.addBinding(params.quality, 'renderScale', { min: 1, max: 2, step: 0.25, label: 'render scale' })
 			.on('change', (ev) => this.scene.postfx.setRenderScale(ev.value))

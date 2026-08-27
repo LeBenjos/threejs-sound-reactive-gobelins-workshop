@@ -57,7 +57,11 @@ export default class Sky {
 		// backdrop so the view direction stays coherent. Pitch and roll stay
 		// uncoupled- the axes that bred every downward-motion bug (their
 		// accumulated offsets are frozen, zeroing would teleport the pattern).
-		this.flow.y += scrollStep
+		// Wind (test knob): leans the flow by params.wind.angle- at 0 the pure
+		// vertical contract holds exactly (sin 0 = 0, flow.x untouched).
+		const windRad = THREE.MathUtils.degToRad(this.params.wind.angle)
+		this.flow.x += scrollStep * Math.sin(windRad)
+		this.flow.y += scrollStep * Math.cos(windRad)
 		// View-yaw pan, calibrated on the horizontal FOV (a sweep of one FOV
 		// pans one screen width). The VIEW yaw, not the position azimuth: they
 		// match on orbit shots, but on bone-tracked shots the camera sits near
