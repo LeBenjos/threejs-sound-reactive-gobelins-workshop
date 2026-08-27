@@ -32,6 +32,11 @@ export default class Clouds {
 		this.mixScratch = new THREE.Color()      // reused per-frame by lerpColors to avoid GC
 		this.shadowScratch = new THREE.Color()   // same, for the sprites' underside tint
 		this.churn = 0   // internal-billow clock- advances with the energy (see update)
+		// Density-weather state: random phases per session, so WHEN the sky is
+		// crowded or sparse differs on every run.
+		this.weatherTime = 0
+		this.weatherPhase1 = Math.random() * Math.PI * 2
+		this.weatherPhase2 = Math.random() * Math.PI * 2
 		this.build()
 	}
 
@@ -83,10 +88,14 @@ export default class Clouds {
 		this.offsets[i * 3] = Math.cos(angle) * radius
 		this.offsets[i * 3 + 1] = randomY ? (Math.random() * 2 - 1) * layer.yRange : -layer.yRange
 		this.offsets[i * 3 + 2] = Math.sin(angle) * radius
-		// Real cumulus run wider than tall- the random aspect also breaks
-		// the clone look across the field.
-		const scale = layer.scaleMin + Math.random() * (layer.scaleMax - layer.scaleMin)
-		this.scales[i * 2] = scale * (1.1 + Math.random() * 0.6)
+		// Power-law size draw (u^1.7): the wide scaleMin..scaleMax band mostly
+		// yields small/medium puffs, with RARE giants punctuating each layer-
+		// a real sky's distribution, without the overdraw a uniform draw over
+		// the widened band would cost.
+		const scale = layer.scaleMin + Math.pow(Math.random(), 1.7) * (layer.scaleMax - layer.scaleMin)
+		// Aspect 0.9-1.5: most cumulus run wider than tall, some grow TALLER
+		// (congestus)- and the spread breaks the clone look across the field.
+		this.scales[i * 2] = scale * (0.9 + Math.random() * 0.6)
 		this.scales[i * 2 + 1] = scale
 	}
 
@@ -158,6 +167,16 @@ export default class Clouds {
 		// Placid billows when calm, boiling on the drops.
 		this.churn += dt * (0.06 + features.energy * 0.3)
 		this.material.uniforms.time.value = this.churn
+		// Density weather: the field breathes between sparse and crowded over
+		// two slow incommensurate periods (73s/47s, random phases per session)-
+		// moments with a handful of clouds, moments with a packed sky. Applied
+		// through the fade attribute, each sprite's own seed as its rank, so
+		// hidden sprites also EARLY-DISCARD in the shader: sparse moments are
+		// cheaper, not just emptier.
+		this.weatherTime += dt
+		const wave = 0.6 * Math.sin(this.weatherTime * Math.PI * 2 / 73 + this.weatherPhase1)
+			+ 0.4 * Math.sin(this.weatherTime * Math.PI * 2 / 47 + this.weatherPhase2)
+		const density = 1 - (p.weather ?? 1) * 0.45 * (1 - wave)
 
 		const count = this.layerOf.length
 		let recycled = false
@@ -178,7 +197,12 @@ export default class Clouds {
 			// half a second of travel inside the fade, capped at half the band):
 			// a fixed slice reads as a hard pop when kicks push the rise fast.
 			const fadeDist = Math.min(layer.yRange * 0.5, Math.max(layer.yRange * 0.15, baseRise * layer.speedMult * 0.5))
-			this.fades[i] = 1 - THREE.MathUtils.smoothstep(Math.abs(y), layer.yRange - fadeDist, layer.yRange)
+			const edgeFade = 1 - THREE.MathUtils.smoothstep(Math.abs(y), layer.yRange - fadeDist, layer.yRange)
+			// Weather visibility: the sprite exists while the density stands
+			// above its rank (its seed), melting in/out over a 0.12 density
+			// band- the wave moves slowly, so each cloud takes seconds to form
+			// or dissolve. Never pops.
+			this.fades[i] = edgeFade * THREE.MathUtils.smoothstep(density, this.sprite[i * 3] - 0.12, this.sprite[i * 3])
 		}
 		const attrs = this.mesh.geometry.attributes
 		attrs.aOffset.needsUpdate = true

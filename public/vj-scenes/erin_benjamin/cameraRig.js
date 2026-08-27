@@ -107,7 +107,11 @@ export default class CameraRig {
 		const { angle, radius, baseHeight, verticalPhase } = this.orbit
 		const bob = (Math.sin(verticalPhase) * p.verticalAmp + features.energy * p.verticalEnergyMult) * this.shotBobMult
 		this.camera.position.set(Math.sin(angle) * radius, baseHeight + bob, Math.cos(angle) * radius)
-		this.lookScratch.set(0, this.lookY, 0)   // applyFeel scales the shake by subject distance
+		// The target rides 60% of the bob (same cure as the director's height
+		// LFO): pure-pinned lookAt turned every vertical oscillation into a
+		// pitch sweep of the whole world. applyFeel scales the shake by the
+		// distance to this target.
+		this.lookScratch.set(0, this.lookY + bob * 0.6, 0)
 		this.camera.lookAt(this.lookScratch)
 		this.applyFeel(dt, features)
 	}

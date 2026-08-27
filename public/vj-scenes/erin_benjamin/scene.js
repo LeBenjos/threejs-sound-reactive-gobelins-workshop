@@ -6,6 +6,7 @@ import Body from './body.js'
 import CameraRig from './cameraRig.js'
 import Clouds from './clouds.js'
 import { createDefaultParams, pickPreset } from './config.js'
+import DebugView from './debugView.js'
 import Director from './director.js'
 import DropTimeline from './dropTimeline.js'
 import MusicEvents from './events.js'
@@ -68,8 +69,15 @@ export default class ErinBenjaminScene {
 		this.autopilot = new Autopilot(this.params, this.sky, this.clouds, this.body)
 		this.gui = new Gui(this)
 		this.autopilot.onPresetAdvanced = (idx) => this.gui.onPresetAdvanced(idx)
+		this.debugView = new DebugView(this.renderer, this.scene, this.cameraRig.camera)
 
 		addEventListener('resize', this.onResize)
+		addEventListener('keydown', (e) => {
+			if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+				e.preventDefault()
+				this.debugView.toggle()
+			}
+		})
 	}
 
 	warmup() {
@@ -98,14 +106,20 @@ export default class ErinBenjaminScene {
 
 	update() {
 		const a = this.audio // volume · volumeSmooth · kick · kickHard · volumeByFrequency
-		const dt = this.clock.getDelta()
+		// Clamped: coming back from a hidden tab hands one giant delta, which
+		// used to teleport EVERY cloud past its band top- whole-field recycle,
+		// sky emptied for minutes. Capped, a long absence is just one slow frame.
+		const dt = Math.min(this.clock.getDelta(), 0.1)
 
 		// Derived signals first- everything below reads them. The timeline runs
 		// ahead of the features: it fires the mapped drops into them and stands
 		// the live detector down while it owns the current track.
 		this.dropTimeline.update(this.features)
 		this.features.update(dt, a)
-		this.body.update(dt, a, this.features, this.cameraRig.camera)
+		// Inspection mode: the world modules follow the debug camera instead of
+		// the rig's, and the postfx chain is bypassed (raw render + rig frustum).
+		const cam = this.debugView?.enabled ? this.debugView.camera : this.cameraRig.camera
+		this.body.update(dt, a, this.features, cam)
 
 		// Autopilot next- mutates params so the audio-reactive logic below adds on top.
 		if (this.params.autopilot.enabled) this.autopilot.update(dt)
@@ -127,13 +141,21 @@ export default class ErinBenjaminScene {
 		this.events.update(dt, a, this.features)
 		this.director.update(dt, a, this.features)
 		this.cameraRig.update(dt, a, this.features)
-		this.sky.update(dt, a, this.features, this.cameraRig.camera)
+		this.sky.update(dt, a, this.features, cam)   // backdrop: own motion Y-only, X follows the view yaw- see sky.js
+		// Clouds: the WORLD (y-lock) always follows the rig- the show's camera-
+		// even in debug view, or orbiting the free camera would drag the whole
+		// field along. The billboards need no camera here: the vertex shader
+		// builds them from the RENDERING camera's position, debug included.
 		this.clouds.update(dt, a, this.features, this.cameraRig.camera)
-		this.speedLines.update(dt, a, this.features, this.cameraRig.camera)
-		this.motes.update(dt, this.features, this.cameraRig.camera)
+		this.speedLines.update(dt, a, this.features, cam)
+		this.motes.update(dt, this.features, cam)
 		this.rays.update(dt, this.features)
-		this.postfx.update(a, this.features)
-		this.postfx.render(dt)
+		if (this.debugView?.enabled) {
+			this.debugView.render()
+		} else {
+			this.postfx.update(a, this.features)
+			this.postfx.render(dt)
+		}
 	}
 
 	onResize() {
@@ -141,6 +163,7 @@ export default class ErinBenjaminScene {
 		this.renderer.setSize(innerWidth, innerHeight)
 		this.postfx.resize()
 		this.sky.resize()
+		this.debugView?.resize()
 	}
 
 }

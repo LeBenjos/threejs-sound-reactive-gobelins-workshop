@@ -12,14 +12,18 @@ export const CLOUD_COUNT_DEFAULT = 290
 // splits the total count across layers (must roughly sum to 1). Weights are
 // biased toward far layers so the depth dominates the visual.
 export const CLOUD_LAYERS = [
-	{ radiusMin: 2, radiusMax: 6, yRange: 8, scaleMin: 1.0, scaleMax: 2.2, speedMult: 1.9, countShare: 0.18 },
-	{ radiusMin: 5, radiusMax: 12, yRange: 12, scaleMin: 1.8, scaleMax: 3.8, speedMult: 1.0, countShare: 0.22 },
-	{ radiusMin: 11, radiusMax: 24, yRange: 20, scaleMin: 3.2, scaleMax: 6.5, speedMult: 0.55, countShare: 0.20 },
-	{ radiusMin: 22, radiusMax: 48, yRange: 32, scaleMin: 5.5, scaleMax: 13.0, speedMult: 0.38, countShare: 0.17 },
-	{ radiusMin: 42, radiusMax: 85, yRange: 50, scaleMin: 9.0, scaleMax: 22.0, speedMult: 0.20, countShare: 0.13 },
+	// Scale ranges span ~x6 (was ~x2): a REAL sky mixes small puffs and rare
+	// giants at every depth. The spawn draw is power-law biased toward the
+	// small end (clouds.js), so the giants punctuate without exploding the
+	// overdraw.
+	{ radiusMin: 2, radiusMax: 6, yRange: 8, scaleMin: 0.7, scaleMax: 4.5, speedMult: 1.9, countShare: 0.18 },
+	{ radiusMin: 5, radiusMax: 12, yRange: 12, scaleMin: 1.4, scaleMax: 8.0, speedMult: 1.0, countShare: 0.22 },
+	{ radiusMin: 11, radiusMax: 24, yRange: 20, scaleMin: 2.5, scaleMax: 14.0, speedMult: 0.55, countShare: 0.20 },
+	{ radiusMin: 22, radiusMax: 48, yRange: 32, scaleMin: 4.5, scaleMax: 24.0, speedMult: 0.38, countShare: 0.17 },
+	{ radiusMin: 42, radiusMax: 85, yRange: 50, scaleMin: 8.0, scaleMax: 40.0, speedMult: 0.20, countShare: 0.13 },
 	// Horizon backdrop: few but HUGE and near-static- fills the far background
 	// so wide shots never face a bare sky gradient.
-	{ radiusMin: 80, radiusMax: 160, yRange: 70, scaleMin: 22.0, scaleMax: 45.0, speedMult: 0.12, countShare: 0.10 },
+	{ radiusMin: 80, radiusMax: 160, yRange: 70, scaleMin: 18.0, scaleMax: 70.0, speedMult: 0.12, countShare: 0.10 },
 ]
 
 // Sky + cloud color palettes- drawn by weighted rarity on each drop (see
@@ -179,9 +183,13 @@ export function createDefaultParams() {
 			// it out-ran every sprite layer beyond ~10 units, so the big far clouds
 			// read as FALLING against it. The speed feeling now belongs to the
 			// sprite field (riseSpeedBase below); the sky just breathes.
-			scrollSpeedBase: 0.06,
-			scrollEnergyMult: 0.05,
-			scrollKickMult: 0.12,
+			scrollSpeedBase: 0.09,   // floor high enough that residual pitch sweeps never net the sky downward
+			// DISTANT clouds barely accelerate with the music: the speed feeling
+			// belongs to the sprites and speed lines. At the old 0.05/0.12 the
+			// background quadrupled its pace on drops and out-ran every sprite
+			// layer again.
+			scrollEnergyMult: 0.025,
+			scrollKickMult: 0.03,
 			cloudScale: 8.0,
 			brightnessBase: 0.57,
 			brightnessEnergyMult: 0.6,
@@ -199,6 +207,7 @@ export function createDefaultParams() {
 			opacity: 0.85,
 			color: '#ffffff',
 			haze: 0.7,   // aerial perspective- distant sprites melt into the horizon color
+			weather: 1,  // density-weather swing: 0 = always-full field · 1 = sparse↔crowded breathing
 		},
 		// Luminous dust riding the fall's upward stream- stronger in calm passages.
 		motes: { enabled: true, count: 120, opacity: 0.5, radius: 6, rise: 1.2 },

@@ -19,6 +19,9 @@ export default class DropTimeline {
 		this.idx = 0
 		this.lastCt = -10
 		this.decodeCtx = null
+		this.worker = null
+		this.workerBroken = false
+		this.analyzeId = 0
 		this.state = 'idle'   // idle | analysing | ready | fallback
 		this.overridesReady = fetch('./dropmaps.json')
 			.then((r) => (r.ok ? r.json() : {}))
@@ -58,6 +61,42 @@ export default class DropTimeline {
 		features.dropIn = this.idx < this.times.length ? this.times[this.idx] - ct : Infinity
 	}
 
+	// The heavy analysis runs in a Worker so the first-ever play of a track
+	// cannot hitch the frame loop (only the mono mixdown, ~30ms, stays on the
+	// main thread). Samples are cloned rather than transferred: on a worker
+	// failure they are still intact for the inline fallback, and future
+	// requests then skip the worker entirely.
+	analyze(samples, sampleRate) {
+		if (!this.workerBroken && !this.worker) {
+			try {
+				this.worker = new Worker(new URL('./dropWorker.js', import.meta.url), { type: 'module' })
+			} catch {
+				this.workerBroken = true
+			}
+		}
+		if (this.workerBroken) return Promise.resolve(analyzeDrops(samples, sampleRate))
+		return new Promise((resolve) => {
+			const id = ++this.analyzeId
+			const onMessage = (e) => {
+				if (e.data.id !== id) return
+				cleanup()
+				resolve(e.data.times)
+			}
+			const onError = () => {
+				cleanup()
+				this.workerBroken = true
+				resolve(analyzeDrops(samples, sampleRate))
+			}
+			const cleanup = () => {
+				this.worker.removeEventListener('message', onMessage)
+				this.worker.removeEventListener('error', onError)
+			}
+			this.worker.addEventListener('message', onMessage)
+			this.worker.addEventListener('error', onError)
+			this.worker.postMessage({ id, samples, sampleRate })
+		})
+	}
+
 	async load(src) {
 		const requested = src
 		const name = decodeURIComponent(src.split('/').pop().replace(/\.mp3$/i, ''))
@@ -81,7 +120,7 @@ export default class DropTimeline {
 					for (let i = 0; i < samples.length; i++) mixed[i] = (samples[i] + right[i]) * 0.5
 					samples = mixed
 				}
-				times = analyzeDrops(samples, audioBuf.sampleRate).map((t) => Math.round(t * 100) / 100)
+				times = (await this.analyze(samples, audioBuf.sampleRate)).map((t) => Math.round(t * 100) / 100)
 				localStorage.setItem(CACHE_PREFIX + name, JSON.stringify(times))
 			}
 			if (this.src !== requested) return   // the track changed while analysing

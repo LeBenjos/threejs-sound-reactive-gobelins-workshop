@@ -113,8 +113,10 @@ export default class Autopilot {
 		// Director, which hard-cuts between shots).
 		p.camera.verticalAmp = 0.4 + this.osc01(19, 0.4) * 0.9
 
-		// Sky atmosphere- scale + brightness baseline pulse.
-		p.sky.cloudScale = 6.0 + this.osc(40, 0.2) * 3.0
+		// Sky atmosphere- brightness baseline pulse only. cloudScale stays OFF
+		// the autopilot: breathing the scale zooms the backdrop pattern, moving
+		// edge pixels laterally (and vertically off-stream)- the backdrop's
+		// time-driven motion must be the upward flow and nothing else.
 		p.sky.brightnessBase = 0.55 + this.osc01(22, 2.1) * 0.4
 
 		// Cloud field veil density.

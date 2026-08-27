@@ -8,13 +8,15 @@ export default class Sky {
 
 	constructor(scene, params) {
 		this.params = params
-		this.time = 0
-		this.churn = 0   // warp clock- cumulus shapes boil, faster with the energy
-		// Orbital pan state: the FBM background pans with the camera azimuth so
-		// it moves as one world with the 3D sprites (see update).
+		// THE single animated pattern input: the vertical fall displacement.
+		// No parallel clocks (scroll/churn/stretch/yaw-pan used to each carry
+		// their own- their interactions are what kept sneaking lateral and
+		// downward motion into the shapes). flow.x and pan are frozen legacy
+		// offsets- see update() for the Y-only contract.
+		this.flow = new THREE.Vector2()
 		this.pan = 0
-		this.prevAzimuth = null
-		this.dirScratch = new THREE.Vector3()   // reused by the pitch coupling in update()
+		this.prevYaw = null
+		this.dirScratch = new THREE.Vector3()   // reused by the yaw coupling in update()
 		const geometry = new THREE.PlaneGeometry(2, 2)
 		const material = new THREE.ShaderMaterial({
 			uniforms: THREE.UniformsUtils.clone(SkyShader.uniforms),
@@ -46,35 +48,34 @@ export default class Sky {
 		// BASE speed itself sinks toward `floor` when the music goes silent.
 		const floor = this.params.audio.floor
 		const base = p.scrollSpeedBase * (floor + (1 - floor) * features.energy)
-		this.time += dt * features.rate * (base + features.energy * p.scrollEnergyMult + features.flow * p.scrollKickMult * features.energy)
-		this.churn += dt * (0.05 + features.energy * 0.25)
-		// The background pans with the camera's orbital sweep, calibrated on the
-		// horizontal FOV (a sweep of one FOV pans one screen width): the FBM and
-		// the 3D sprites read as ONE world when the camera orbits or whip-pans.
-		// The azimuth is unwrapped so the ±π seam never jumps the pattern; hard
-		// cuts do jump it, masked by the cut itself.
-		const az = Math.atan2(camera.position.x, camera.position.z)
-		if (this.prevAzimuth === null) this.prevAzimuth = az
-		let dAz = az - this.prevAzimuth
-		if (dAz > Math.PI) dAz -= Math.PI * 2
-		else if (dAz < -Math.PI) dAz += Math.PI * 2
-		this.prevAzimuth = az
+		// Hard ceiling at 0.15 screen/s: whatever the GUI sliders say, the
+		// infinitely-far background can never rush- distance IS slowness.
+		const scrollStep = dt * Math.min(0.15, features.rate * (base + features.energy * p.scrollEnergyMult + features.flow * p.scrollKickMult * features.energy))
+		// THE backdrop contract (final): its own motion is the upward fall
+		// stream, nothing else- flow.x is frozen forever. The ONE camera
+		// coupling it keeps is the view yaw: looking elsewhere pans the
+		// backdrop so the view direction stays coherent. Pitch and roll stay
+		// uncoupled- the axes that bred every downward-motion bug (their
+		// accumulated offsets are frozen, zeroing would teleport the pattern).
+		this.flow.y += scrollStep
+		// View-yaw pan, calibrated on the horizontal FOV (a sweep of one FOV
+		// pans one screen width). The VIEW yaw, not the position azimuth: they
+		// match on orbit shots, but on bone-tracked shots the camera sits near
+		// the axis and its position azimuth whips erratically. Unwrapped so the
+		// ±π seam never jumps; hard cuts do, masked by the cut itself.
+		const yaw = Math.atan2(camera.getWorldDirection(this.dirScratch).x, this.dirScratch.z)
+		if (this.prevYaw === null) this.prevYaw = yaw
+		let dYaw = yaw - this.prevYaw
+		if (dYaw > Math.PI) dYaw -= Math.PI * 2
+		else if (dYaw < -Math.PI) dYaw += Math.PI * 2
+		this.prevYaw = yaw
 		const hFov = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect)
-		this.pan -= dAz * (camera.aspect / hFov)
+		this.pan -= dYaw * (camera.aspect / hFov)
 		const u = this.uniforms
-		u.time.value = this.time
+		u.flowOff.value.copy(this.flow)
 		u.panX.value = this.pan
-		// Pitch/roll coupling, completing the yaw pan above. The sprite field is
-		// y-locked to the camera, so height changes (LFO, bob, tracked shots)
-		// reach the screen purely as PITCH, and applyFeel adds a slow roll: both
-		// must carry the background too, or the slow far sprites read as falling
-		// against a frozen sky. Pitch is continuous (asin, no wrap); hard cuts
-		// jump it, masked by the cut.
-		const vFov = THREE.MathUtils.degToRad(camera.fov)
-		const pitch = Math.asin(THREE.MathUtils.clamp(camera.getWorldDirection(this.dirScratch).y, -1, 1))
-		u.panY.value = pitch / vFov
-		u.rollAngle.value = camera.userData.roll ?? 0
-		u.churnTime.value = this.churn
+		u.panY.value = this.panYCur ?? 0
+		u.rollAngle.value = 0
 		u.cloudScale.value = p.cloudScale
 		// Clamped at white: past 1.0 the cloud tint burns the whole frame out and
 		// the sky gradient disappears- the "wall of white" during intense passages.
@@ -84,7 +85,14 @@ export default class Sky {
 		// through fewer, denser clouds- not through more noise. The MIDS pull
 		// cover back in: the melody (voice, synths, guitars) thickens the sky
 		// while the rhythm section drives everything else.
-		u.coverageShift.value = features.energy * 0.17 - features.mid * p.midCoverage
+		// SLEWED (1.5s): coverage moves the contours, and an instant coverage
+		// step makes every cloud edge JUMP- the fast mid term had the outlines
+		// flicker-breathing at audio rate, the last measured source of
+		// downward edge motion. Slewed, coverage reads as dissolve, not travel.
+		const coverTarget = features.energy * 0.17 - features.mid * p.midCoverage
+		this.coverCur ??= coverTarget
+		this.coverCur += (coverTarget - this.coverCur) * (1 - Math.exp(-dt / 1.5))
+		u.coverageShift.value = this.coverCur
 	}
 
 	// Lerp the sky uniforms between two color presets at factor f (0=A, 1=B).

@@ -244,6 +244,7 @@ export default class Gui {
 		cloudsFolder.addBinding(params.clouds, 'riseKickMult', { min: 0, max: 12, step: 0.1 })
 		cloudsFolder.addBinding(params.clouds, 'opacity', { min: 0, max: 1, step: 0.01 })
 		cloudsFolder.addBinding(params.clouds, 'haze', { min: 0, max: 1, step: 0.01 })
+		cloudsFolder.addBinding(params.clouds, 'weather', { min: 0, max: 1, step: 0.05 })
 		cloudsFolder.addBinding(params.clouds, 'color', { view: 'color' }).on('change', (ev) => {
 			clouds.setColor(ev.value)
 		})

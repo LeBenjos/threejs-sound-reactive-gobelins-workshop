@@ -5,9 +5,11 @@ import * as THREE from 'three'
 // FBM noise = clouds rising = sensation of falling.
 export default {
 	uniforms: {
-		time: { value: 0 },
+		// The ONLY animated pattern input: integrated displacement along the
+		// flow compass (sky.js)- its direction lives inside the allowed cone by
+		// construction, so the shapes cannot move any other way.
+		flowOff: { value: new THREE.Vector2(0, 0) },
 		panX: { value: 0 },            // horizontal world-pan- follows the camera azimuth (sky.js)
-		churnTime: { value: 0 },       // warp clock- shapes boil slowly, energy-driven (sky.js)
 		panY: { value: 0 },            // vertical world-shift- follows the camera pitch (sky.js)
 		rollAngle: { value: 0 },       // screen-space rotation- follows the camera roll (sky.js)
 		cloudScale: { value: 3.0 },
@@ -33,11 +35,10 @@ export default {
 		}
 	`,
 	fragmentShader: /* glsl */`
-		uniform float time;
+		uniform vec2 flowOff;
 		uniform float panX;
 		uniform float panY;
 		uniform float rollAngle;
-		uniform float churnTime;
 		uniform float cloudScale;
 		uniform float coverageShift;
 		uniform float brightness;
@@ -85,6 +86,13 @@ export default {
 		float fbm3( vec2 p ) {
 			return 0.5 * noise( p ) + 0.25 * noise( p * 2.0 ) + 0.125 * noise( p * 4.0 ) + 0.046875;
 		}
+		// 2-octave variant for the SECONDARY mass layer: it only interferes with
+		// massA to animate the cover, its own micro-detail is invisible under
+		// massA's- and it runs fullscreen. +0.109375 = the dropped octaves'
+		// expected value, keeping the 0.62/0.38 blend mean-unbiased.
+		float fbm2( vec2 p ) {
+			return 0.5 * noise( p ) + 0.25 * noise( p * 2.0 ) + 0.109375;
+		}
 
 		void main() {
 			// Aspect correction keeps clouds round; subtracting from y samples lower
@@ -103,7 +111,6 @@ export default {
 			uv = ctr + vec2( cr * rd.x - sr * rd.y, sr * rd.x + cr * rd.y );
 			uv.x += panX;
 			uv.y += panY;
-			uv.y -= time;
 
 			// Spatial palette transitions: the B palette advances behind a moving
 			// front (metric picked by wipeMode). Skipped entirely outside
@@ -131,29 +138,39 @@ export default {
 			vec3 cloudC = mix( cloudColor, cloudColorB, wm );
 
 			vec3 sky = mix( bottomC, topC, vUv.y );
-			// Two scales: the large one places cumulus masses, the fine one adds
-			// detail only INSIDE those masses (mass-modulated)- no more uniform
-			// full-screen grain. The mass field is domain-warped (it curls on
-			// itself: billowing shapes, not raw noise) and churnTime drifts the
-			// warp so the masses boil slowly.
-			vec2 m = uv * cloudScale * 0.35;
-			// Churn drifts UPWARD (-churnTime): with +churnTime the boil sank
-			// against the scroll, and in breakdowns (scroll near its floor) the
-			// sky's own cumulus visibly dripped downward.
-			vec2 warp = vec2( fbm3( m + vec2( 0.0, -churnTime ) ), fbm3( m + vec2( 5.2, 1.3 - churnTime ) ) );
-			vec2 mw = m + ( warp - 0.5 ) * 1.2;
-			float mass = fbm( mw );
-			float detail = fbm3( uv * cloudScale + vec2( 37.2, 11.7 ) );
-			float density = mass + ( detail - 0.5 ) * 0.55 * mass;
+			// Motion contract of the rework: the shapes' ONLY animation is the
+			// advection of two layers along flowOff at different speeds (1x and
+			// 1.55x- an internal parallax whose interference makes the cover
+			// boil organically), and the domain warp is STATIC (billowy shapes,
+			// zero drift of its own). Nothing here can carry a lobe outside the
+			// flow cone- downward is unreachable by construction.
+			// cloudScale zooms ONLY the bounded screen coordinate, anchored on
+			// the screen center; the accumulated flow is stored scale-invariant
+			// (constant reference multipliers- ref scale 6, the autopilot LFO's
+			// midpoint). Multiplying the unbounded accumulated flow by a
+			// BREATHING cloudScale sent the whole pattern rushing off-axis-
+			// downward half the time (measured: up to 43% of cloud blocks
+			// descending; anchored: zero).
+			vec2 fb = uv - ctr;
+			vec2 mA = fb * cloudScale * 0.35 - flowOff * 2.1;
+			vec2 warp = vec2( fbm3( mA + vec2( 17.3, 3.1 ) ), fbm3( mA + vec2( 5.2, 11.7 ) ) );
+			vec2 mw = mA + ( warp - 0.5 ) * 1.2;
+			float massA = fbm( mw );
+			float massB = fbm2( fb * cloudScale * 0.8 - flowOff * 7.44 + vec2( 41.7, 7.9 ) );
+			float mass = massA * 0.62 + massB * 0.38;
+			// The fine detail lives only INSIDE the dominant masses (modulated)-
+			// no uniform full-screen grain.
+			float detail = fbm3( fb * cloudScale - flowOff * 6.0 + vec2( 37.2, 11.7 ) );
+			float density = mass + ( detail - 0.5 ) * 0.55 * massA;
 			// coverageShift raises the window at high energy: only the dense FBM
 			// cores survive, so the sky gradient stays visible behind the speed
 			// streaks instead of drowning under a full-frame noise wall.
 			float clouds = smoothstep( 0.36 + coverageShift, 0.68 + coverageShift, density );
-			// Top-lit self-shadowing: a denser field just above means this pixel is
-			// an underside. The shadow tint comes from the preset palette (cloud
-			// color pulled toward skyTop), so the color cycle carries through.
+			// Top-lit self-shadowing on the dominant layer: a denser field just
+			// above means this pixel is an underside. The shadow tint comes from
+			// the preset palette, so the color cycle carries through.
 			float above = fbm3( mw + vec2( 0.0, 0.12 * cloudScale * 0.35 ) );
-			float shadow = smoothstep( 0.0, 0.25, above - mass ) * 0.55;
+			float shadow = smoothstep( 0.0, 0.25, above - massA ) * 0.55;
 			vec3 shadowCol = mix( cloudC, topC, 0.45 ) * 0.8;
 			vec3 cloudCol = mix( cloudC * brightness, shadowCol, shadow );
 			vec3 col = mix( sky, cloudCol, clouds );

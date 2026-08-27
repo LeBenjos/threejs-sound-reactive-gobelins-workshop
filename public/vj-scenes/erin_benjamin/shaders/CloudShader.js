@@ -5,8 +5,9 @@ import * as THREE from 'three'
 // scale) rides instanced attributes; palette colors, churn clock and global
 // opacity are shared uniforms. The vertex builds a point-facing billboard
 // with world-up (same orientation lookAt gave the per-mesh version), and the
-// fragment is the original puffy FBM: domain warp, top-lit modeling in the
-// preset's palette, silver lining, near-lens dissolve.
+// fragment is a puffy FBM lit as a VOLUME: domain warp, bumpy-sphere normal
+// with half-Lambert modeling in the preset's palette, crease occlusion,
+// sunlit crests, near-lens dissolve.
 export default {
 	uniforms: {
 		opacity: { value: 0.85 },
@@ -37,23 +38,27 @@ export default {
 		varying vec4 vClip;
 		varying vec2 vW;
 		varying vec2 vChurnOff;
-		varying vec2 vProbeOff;
 		void main() {
 			vUv = uv;
 			vShadowMult = aSprite.z;
 			vFade = aFade;
 			// Per-sprite rotation of the noise domain- breaks the clone look
-			// without touching the (screen-up) lighting fed by vProbeOff.
+			// without touching the lighting: the fragment's normal is built in
+			// QUAD space (p), which this rotation never touches.
 			float ca = cos( aSprite.y );
 			float sa = sin( aSprite.y );
 			vec2 p = uv - 0.5;
 			vec2 seedOff = vec2( aSprite.x * 7.3, aSprite.x * 2.1 );
+			// Billow frequency grows with the sprite's size (2.4 for the small
+			// puffs, up to 4.2 for the giants): a giant is a MASS of lobes, not
+			// a zoomed-up puff- zoomed noise reads soft and empty at 40 units.
+			float freq = 2.4 + 1.8 * clamp( aScale.y / 30.0, 0.0, 1.0 );
 			// Rotated+scaled noise domain- affine in uv, so the varying
 			// interpolates to the exact per-pixel value.
-			vW = vec2( ca * p.x - sa * p.y, sa * p.x + ca * p.y ) * 3.0 + seedOff;
+			vW = vec2( ca * p.x - sa * p.y, sa * p.x + ca * p.y ) * freq + seedOff;
 			// Churn clock offset for the fragment's domain warp (energy-driven
 			// clock, integrated in clouds.js). It is (a) COUNTER-ROTATED into
-			// the noise domain (same construction as vProbeOff) so the drift
+			// the noise domain so the drift
 			// reads as screen-UP for every sprite- unrotated, each sprite
 			// drifted in a random direction and half the field visibly sank-
 			// and (b) divided by the sprite scale so the world-equivalent
@@ -62,9 +67,6 @@ export default {
 			// real rise 10-90x). Per-instance constant, so it interpolates
 			// flat as a varying.
 			vChurnOff = vec2( sa, -ca ) * ( time / aScale.y );
-			// Lighting-probe offset- counter-rotated so the probe samples
-			// screen-up regardless of the sprite's noise rotation.
-			vProbeOff = vec2( -sa, ca ) * 0.48;
 			// The group carries the camera's vertical lock- bring the anchor
 			// through the model matrix before billboarding around it.
 			vec3 anchor = ( modelMatrix * vec4( aOffset, 1.0 ) ).xyz;
@@ -100,7 +102,6 @@ export default {
 		varying vec4 vClip;
 		varying vec2 vW;
 		varying vec2 vChurnOff;
-		varying vec2 vProbeOff;
 
 		float hash( vec2 p ) {
 			return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 );
@@ -132,14 +133,6 @@ export default {
 		// ( warp - 0.5 ) remap keeps an unbiased mean.
 		float fbm3( vec2 p ) {
 			return 0.5 * noise( p ) + 0.25 * noise( p * 2.0 ) + 0.125 * noise( p * 4.0 ) + 0.03125;
-		}
-		// 2-octave variant for the shading probe- the shadow term is smoothstepped
-		// anyway, the missing high octaves are invisible there and it cuts the
-		// sprite's ALU noticeably (the field is the scene's biggest fragment cost).
-		// +0.09375 restores the dropped octaves' expected value, so delta
-		// against the 4-octave fbm keeps an unbiased mean.
-		float fbm2( vec2 p ) {
-			return 0.5 * noise( p ) + 0.25 * noise( p * 2.0 ) + 0.09375;
 		}
 
 		void main() {
@@ -192,34 +185,32 @@ export default {
 			// FBM-warped radius: the silhouette turns jagged and organic instead of
 			// showing the quad's circular falloff. Dense core, soft ragged edge.
 			float r = length( p ) * 2.0 + ( n - 0.5 ) * 0.8;
-			float body = 1.0 - smoothstep( 0.1, 0.95, r );
-			float puff = smoothstep( 0.16, 0.55, n );
-			float shadow;
-			float lining;
-			// The probe and lining only shape terms the haze mix washes out at
-			// this distance; haze is ~constant across one sprite, so the branch
-			// is per-sprite coherent- no divergence inside a sprite.
-			if ( haze > 0.6 ) {
-				// Flat-mean stand-in for the probe (delta ~ 0): shadow keeps
-				// only its vertical bias, the lining stays dark.
-				shadow = min( 1.0, ( 1.0 - vUv.y ) * 0.25 * vShadowMult );
-				lining = 0.0;
-			} else {
-				// Top-lit modeling, same rule as the sky shader: a denser field just
-				// above means this pixel is an underside. The offset is rotated into
-				// the noise domain so "up" stays screen-up, and the smooth warp is
-				// reused- close enough at this distance. (1-vUv.y) biases the lower
-				// half darker.
-				float above = fbm2( vW + vProbeOff + ( warp - 0.5 ) * 1.4 );
-				float delta = n - above;
-				shadow = min( 1.0, ( smoothstep( 0.0, 0.3, -delta ) * 0.6 + ( 1.0 - vUv.y ) * 0.25 ) * vShadowMult );
-				// Silver lining: where density drops toward the light (delta > 0) the
-				// top edge catches it- pushed toward white so it reads as sun, echoing
-				// the body's rim language.
-				lining = smoothstep( 0.1, 0.4, delta ) * ( 1.0 - shadow );
-			}
-			vec3 col = mix( cloudColorM, shadowColorM, shadow );
-			col += mix( cloudColorM, vec3( 1.0 ), 0.5 ) * lining * 0.3;
+			// pow 0.8 densifies the core without touching the soft edge- the
+			// sprite reads as a MASS, not a veil.
+			float body = pow( 1.0 - smoothstep( 0.1, 0.95, r ), 0.8 );
+			// Wider soft window (0.12-0.5): the interior saturates sooner- the
+			// sprite reads as cloud MATTER, not a translucent veil.
+			float puff = smoothstep( 0.12, 0.5, n );
+			// Fluffy modeling: a bumpy SPHERE normal (the warped radius carries
+			// the cauliflower bumps into it) perturbed by the two warp channels-
+			// a free detail normal, they are already computed- lit half-Lambert
+			// from a fixed top-front sun. Per-pixel rounded volume for LESS ALU
+			// than the density probe it replaces (the whole block reuses existing
+			// values- zero extra noise taps).
+			float r01 = clamp( r, 0.0, 1.0 );
+			vec3 nrm = normalize( vec3( p * 2.0 + ( warp - 0.5 ) * 1.1, 0.5 + 0.5 * sqrt( 1.0 - r01 * r01 ) ) );
+			float lambert = dot( nrm, vec3( 0.28, 0.72, 0.63 ) ) * 0.5 + 0.5;
+			// vShadowMult (0.8-1.2 per sprite) now varies the modeling CONTRAST-
+			// same role it had on the old shadow depth.
+			float shade = pow( lambert, 1.5 * vShadowMult );
+			// Crease occlusion: the folds between billows (low detail noise
+			// inside the body) sink slightly- the cauliflower reads as depth.
+			float ao = 0.78 + 0.22 * smoothstep( 0.25, 0.7, n );
+			vec3 col = mix( shadowColorM, cloudColorM, shade ) * ao;
+			// Sunlit crest: the lobes facing the light catch a near-white
+			// highlight- the fluffy top, echoing the body's rim language.
+			float crest = pow( max( 0.0, dot( nrm, vec3( 0.28, 0.72, 0.63 ) ) ), 4.0 );
+			col += mix( cloudColorM, vec3( 1.0 ), 0.5 ) * crest * 0.3;
 			col = mix( col, hazeColorM, haze );
 			float alpha = body * puff * alphaCeil;
 			if ( alpha < 0.01 ) discard;   // avoid sorting artifacts on near-empty pixels

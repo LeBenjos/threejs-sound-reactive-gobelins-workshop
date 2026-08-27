@@ -69,6 +69,12 @@ export default class Director {
 			const r = this.rig.orbit
 			r.radius = 4.8 + Math.sin(this.phase * (Math.PI * 2) / 32) * 1.8
 			r.baseHeight = 0.6 + Math.sin(this.phase * (Math.PI * 2) / 27 + 1.7) * 1.5
+			// The look target rides 60% of the height LFO: with lookAt pinned, the
+			// LFO's descending half became a sustained PITCH sweep dragging the
+			// whole world- background included- down the screen (the slowed sky
+			// scroll no longer masks it). Following most of it keeps the framing
+			// breathing while the horizon stays quiet.
+			this.rig.lookY = (r.baseHeight - 0.6) * 0.6
 
 			this.cooldown -= dt
 			this.baseTime += dt
