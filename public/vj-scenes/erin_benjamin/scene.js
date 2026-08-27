@@ -5,8 +5,9 @@ import Autopilot from './autopilot.js'
 import Body from './body.js'
 import CameraRig from './cameraRig.js'
 import Clouds from './clouds.js'
-import { COLOR_PRESETS, createDefaultParams } from './config.js'
+import { createDefaultParams, pickPreset } from './config.js'
 import Director from './director.js'
+import DropTimeline from './dropTimeline.js'
 import MusicEvents from './events.js'
 import Gui from './gui.js'
 import Motes from './motes.js'
@@ -23,6 +24,7 @@ export default class ErinBenjaminScene {
 		this.audio = audio
 		this.params = createDefaultParams()
 		this.features = new AudioFeatures(this.params)
+		this.dropTimeline = new DropTimeline(audio)   // early: the overrides fetch starts now
 		this.body = new Body(this.params)
 		this.renderer = null
 		this.scene = null
@@ -81,7 +83,7 @@ export default class ErinBenjaminScene {
 		// random palette, a dive-in dolly, and a soft burst (0.85 stays under the
 		// 0.9 rising edge, so it flashes and shocks WITHOUT re-switching the
 		// palette we just picked).
-		this.params.autopilot.preset = Math.floor(Math.random() * COLOR_PRESETS.length)
+		this.params.autopilot.preset = pickPreset(this.params.autopilot.preset)   // weighted rarity draw
 		this.autopilot.resetPresetTimer()
 		this.gui.onPresetAdvanced(this.params.autopilot.preset)
 		this.director.entrance()
@@ -98,7 +100,10 @@ export default class ErinBenjaminScene {
 		const a = this.audio // volume · volumeSmooth · kick · kickHard · volumeByFrequency
 		const dt = this.clock.getDelta()
 
-		// Derived signals first- everything below reads them.
+		// Derived signals first- everything below reads them. The timeline runs
+		// ahead of the features: it fires the mapped drops into them and stands
+		// the live detector down while it owns the current track.
+		this.dropTimeline.update(this.features)
 		this.features.update(dt, a)
 		this.body.update(dt, a, this.features, this.cameraRig.camera)
 

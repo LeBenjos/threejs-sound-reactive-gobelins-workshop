@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 
-import { COLOR_PRESETS } from './config.js'
+import { COLOR_PRESETS, pickPreset } from './config.js'
 
 // Spatial transitions: shader wipeMode + per-mode duration and body factor
 // (the body sits at screen center- it leads a center-out front, trails an

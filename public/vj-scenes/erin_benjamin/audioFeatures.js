@@ -65,6 +65,17 @@ export default class AudioFeatures {
 		return raw / peaks[key]
 	}
 
+	// External drop trigger (the precomputed timeline)- shares the pulse and
+	// the refractory with the live paths so a handover between the two can
+	// never double-fire.
+	fireDrop(source = 'external') {
+		this.dropPulse = 1
+		this.dropCooldown = 8
+		this.quietTime = 0
+		this.bassQuiet = 0
+		if (this.debugDrops) console.log(`[drop] FIRE via ${source} @${this.time.toFixed(1)}s`)
+	}
+
 	update(dt, audio) {
 		const p = this.params.audio
 		const f = audio.volumeByFrequency
@@ -235,7 +246,10 @@ export default class AudioFeatures {
 		// moment can no longer machine-gun pulses every 2s.
 		const strong = (dropBass && this.bassQuiet > 0.9) || (dropQuiet && this.quietTime > 1.5)
 		const spaced = this.dropCooldown <= 0 || (strong && this.dropCooldown <= 6)
-		const canFire = (dropQuiet || dropBass || dropJump || dropBreath) && spaced
+		// The live paths stand down while the precomputed timeline owns the
+		// current track- they only cover mic input, the host iframe and tracks
+		// whose analysis is pending or failed.
+		const canFire = !this.timelineActive && (dropQuiet || dropBass || dropJump || dropBreath) && spaced
 		if (canFire) {
 			this.dropPulse = 1
 			this.dropCooldown = 8   // see the spaced gate: first 2s absolute, then structural-only
@@ -247,7 +261,7 @@ export default class AudioFeatures {
 		// fire, with every gate's value- play the track, and the reason a given
 		// drop was ignored reads straight off the console. Throttled to one
 		// line per 2s so loud sections cannot spam.
-		if (this.debugDrops) {
+		if (this.debugDrops && !this.timelineActive) {
 			this._dbgTimer = Math.max(0, this._dbgTimer - dt)
 			const hot = t > 0.8
 			const bassSurge = this.bass > 0.6 && this._dbgPrevBass <= 0.6
