@@ -38,14 +38,14 @@ export const COLOR_PRESETS = [
 	{
 		// Golden heaven: warm gold zenith dissolving into cream light, gilded
 		// clouds- the divine card. Royal-blue rim: the classic gold pairing.
-		name: 'Paradise', weight: 0.6,
+		name: 'Paradise', weight: 0.4,
 		skyTop: new THREE.Color(0xd6952a), skyBottom: new THREE.Color(0xfff3d6),
 		skyCloudColor: new THREE.Color(0xfff8e8), cloudsColor: new THREE.Color(0xf2dca6),
 		bodyRim: new THREE.Color(0x2f6bff),
 	},
 	{
 		// Cold pale morning: gray-blue zenith over a peach glow, warm gray clouds.
-		name: 'Dawn', weight: 2,
+		name: 'Dawn', weight: 3,
 		skyTop: new THREE.Color(0x6f8fb0), skyBottom: new THREE.Color(0xf6d3b5),
 		skyCloudColor: new THREE.Color(0xf0e3d8), cloudsColor: new THREE.Color(0xd9c7bd),
 		bodyRim: new THREE.Color(0xffab3d),
@@ -60,26 +60,26 @@ export const COLOR_PRESETS = [
 	},
 	{
 		// Bubblegum dream: lavender over pink, candy-blue rim.
-		name: 'Candy', weight: 1.5,
+		name: 'Candy', weight: 0.4,
 		skyTop: new THREE.Color(0x8b42c9), skyBottom: new THREE.Color(0xffc2e0),
 		skyCloudColor: new THREE.Color(0xffe6f4), cloudsColor: new THREE.Color(0xf7c9e8),
 		bodyRim: new THREE.Color(0x38b6ff),
 	},
 	{
-		name: 'Twilight', weight: 2.5,
+		name: 'Twilight', weight: 1.2,
 		skyTop: new THREE.Color(0x33306f), skyBottom: new THREE.Color(0x74538c),
 		skyCloudColor: new THREE.Color(0x7d5590), cloudsColor: new THREE.Color(0x55407a),
 		bodyRim: new THREE.Color(0xffd166),
 	},
 	{
-		name: 'Aurora', weight: 1.5,
+		name: 'Aurora', weight: 1.2,
 		skyTop: new THREE.Color(0x05203f), skyBottom: new THREE.Color(0x129074),
 		skyCloudColor: new THREE.Color(0x96ffe4), cloudsColor: new THREE.Color(0x63f5cf),
 		bodyRim: new THREE.Color(0xff8c2e),
 	},
 	{
 		// Deep ocean night: near-black over drowned indigo, cold heavy clouds.
-		name: 'Abyss', weight: 1.5,
+		name: 'Abyss', weight: 1.2,
 		skyTop: new THREE.Color(0x030b1a), skyBottom: new THREE.Color(0x16406b),
 		skyCloudColor: new THREE.Color(0x2f5d95), cloudsColor: new THREE.Color(0x24476f),
 		bodyRim: new THREE.Color(0x00e5a0),
@@ -87,14 +87,14 @@ export const COLOR_PRESETS = [
 	{
 		// Deep space: near-black over drowned violet-indigo, nebula-tinted
 		// clouds- and the white dust motes read as stars. Starlight rim.
-		name: 'Cosmos', weight: 0.8,
+		name: 'Cosmos', weight: 0.4,
 		skyTop: new THREE.Color(0x010209), skyBottom: new THREE.Color(0x0d1030),
 		skyCloudColor: new THREE.Color(0x232a5c), cloudsColor: new THREE.Color(0x161a40),
 		bodyRim: new THREE.Color(0xcfe8ff),
 	},
 	{
 		// Graphite storm front: slate gradient, steel clouds, electric-yellow rim.
-		name: 'Storm', weight: 1.5,
+		name: 'Storm', weight: 3,
 		skyTop: new THREE.Color(0x232b36), skyBottom: new THREE.Color(0x5a6672),
 		skyCloudColor: new THREE.Color(0x8a95a1), cloudsColor: new THREE.Color(0x6b7681),
 		bodyRim: new THREE.Color(0xffe14d),
@@ -102,7 +102,7 @@ export const COLOR_PRESETS = [
 	{
 		// The danger card for the drop-driven palette slams: near-black plum over
 		// a burning horizon, scorched clouds, glacier-blue rim cutting through the heat.
-		name: 'Ember', weight: 1,
+		name: 'Ember', weight: 1.2,
 		skyTop: new THREE.Color(0x200913), skyBottom: new THREE.Color(0xd14a2b),
 		skyCloudColor: new THREE.Color(0xe8794f), cloudsColor: new THREE.Color(0x8c3430),
 		bodyRim: new THREE.Color(0x66c7ff),
