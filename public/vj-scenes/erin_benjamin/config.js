@@ -36,12 +36,26 @@ export const COLOR_PRESETS = [
 		bodyRim: new THREE.Color(0xff6a00),
 	},
 	{
+		// Cold pale morning: gray-blue zenith over a peach glow, warm gray clouds.
+		name: 'Dawn',
+		skyTop: new THREE.Color(0x6f8fb0), skyBottom: new THREE.Color(0xf6d3b5),
+		skyCloudColor: new THREE.Color(0xf0e3d8), cloudsColor: new THREE.Color(0xd9c7bd),
+		bodyRim: new THREE.Color(0xff4d6d),
+	},
+	{
 		// Gradient un-inverted: dusky mauve zenith over a glowing orange horizon
 		// (the old version put the orange on top). Peach clouds catch the low sun.
 		name: 'Sunset',
 		skyTop: new THREE.Color(0x8f4f86), skyBottom: new THREE.Color(0xf5975a),
 		skyCloudColor: new THREE.Color(0xf8b38a), cloudsColor: new THREE.Color(0xedaa7e),
 		bodyRim: new THREE.Color(0x21d9ff),
+	},
+	{
+		// Bubblegum dream: lavender over pink, mint rim cutting the sweetness.
+		name: 'Candy',
+		skyTop: new THREE.Color(0xb06ad4), skyBottom: new THREE.Color(0xffc2e0),
+		skyCloudColor: new THREE.Color(0xffe6f4), cloudsColor: new THREE.Color(0xf7c9e8),
+		bodyRim: new THREE.Color(0x29ffd2),
 	},
 	{
 		name: 'Twilight',
@@ -54,6 +68,20 @@ export const COLOR_PRESETS = [
 		skyTop: new THREE.Color(0x05203f), skyBottom: new THREE.Color(0x129074),
 		skyCloudColor: new THREE.Color(0x96ffe4), cloudsColor: new THREE.Color(0x63f5cf),
 		bodyRim: new THREE.Color(0xffb35c),
+	},
+	{
+		// Deep ocean night: near-black over drowned indigo, cold heavy clouds.
+		name: 'Abyss',
+		skyTop: new THREE.Color(0x030b1a), skyBottom: new THREE.Color(0x16406b),
+		skyCloudColor: new THREE.Color(0x2f5d95), cloudsColor: new THREE.Color(0x24476f),
+		bodyRim: new THREE.Color(0x00e5a0),
+	},
+	{
+		// Graphite storm front: slate gradient, steel clouds, electric-yellow rim.
+		name: 'Storm',
+		skyTop: new THREE.Color(0x232b36), skyBottom: new THREE.Color(0x5a6672),
+		skyCloudColor: new THREE.Color(0x8a95a1), cloudsColor: new THREE.Color(0x6b7681),
+		bodyRim: new THREE.Color(0xffe14d),
 	},
 	{
 		// The danger card for the drop-driven palette slams: near-black plum over
