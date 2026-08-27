@@ -10,6 +10,7 @@ const EVENTS = [
 	// (the flying clip is still in character.glb- re-add a line here to bring it back)
 	{ name: 'backflip', hold: 0, calm: 0.5, intense: 3 },        // one-shot- returns by itself
 	{ name: 'backfalling', hold: [5, 9], calm: 3, intense: 2 },  // rolls onto his back- held then released
+	{ name: 'spin', hold: [3, 5], calm: 1.5, intense: 2.5 },     // flat helicopter spin- held then released
 ]
 const REPEAT_PENALTY = 0.35   // last-played event's weight multiplier- variety without strict alternation
 

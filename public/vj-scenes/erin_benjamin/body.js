@@ -22,6 +22,8 @@ const EVENT_TUNING = {
 	// Back-first fall: already a falling clip, so no limb mix needed- just a
 	// slow roll-over blend.
 	backfalling: { fade: 0.9 },
+	// Flat helicopter spin: slight flail bleed so it stays involuntary.
+	spin: { fade: 0.7, limbMix: 0.8 },
 }
 const LIMB_RE = /Arm|Hand|Shoulder|Leg|Foot|Toe/i   // everything but Hips/Spine/Neck/Head
 

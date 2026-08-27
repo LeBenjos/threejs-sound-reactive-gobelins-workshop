@@ -188,6 +188,7 @@ export default class Gui {
 		events.addBinding(this.scene.events.state, 'last', { readonly: true })
 		events.addButton({ title: '🤸 backflip' }).on('click', () => this.scene.events.trigger('backflip'))
 		events.addButton({ title: '🔄 backfalling' }).on('click', () => this.scene.events.trigger('backfalling'))
+		events.addButton({ title: '🌀 spin' }).on('click', () => this.scene.events.trigger('spin'))
 		events.addBinding(params.events, 'enabled')
 		events.addBinding(params.events, 'chance', { min: 0, max: 1, step: 0.05 })
 		events.addBinding(params.events, 'cooldown', { min: 0, max: 60, step: 1 })
