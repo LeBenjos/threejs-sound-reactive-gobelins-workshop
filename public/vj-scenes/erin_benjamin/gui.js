@@ -79,7 +79,7 @@ export default class Gui {
 		})
 		auto.addBinding(params.autopilot, 'dropMode', {
 			label: 'transition drop',
-			options: { 'aléatoire': 'random', 'coupure': 'snap', 'glissé': 'surge', 'flash blanc': 'flash', 'par beats': 'steps' },
+			options: { 'aléatoire': 'random', 'coupure': 'snap', 'glissé': 'surge', 'flash blanc': 'flash', 'plongée noir': 'dip' },
 		})
 		// Manual preset selector- overridden live when colorCycle is on (the cycle
 		// keeps writing into the uniforms each frame).
