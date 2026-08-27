@@ -51,6 +51,14 @@ export default class Autopilot {
 		this.transition = null
 	}
 
+	// Uniform draw over every preset EXCEPT the current one- the palette
+	// wanders freely instead of looping the config order.
+	pickNext(cur) {
+		let n = Math.floor(Math.random() * (COLOR_PRESETS.length - 1))
+		if (n >= cur) n++
+		return n
+	}
+
 	// Palette change on a musical drop- the ONLY thing that moves the palette.
 	// dropMode picks the style ('random' draws one per drop):
 	// - snap: hard cut to the next preset, a deliberate color slam
@@ -66,12 +74,14 @@ export default class Autopilot {
 		let mode = p.dropMode
 		if (mode === 'random') mode = ['snap', 'snap', 'surge', 'flash', 'flash', 'wipe', 'wipe', 'curtain', 'iris', 'dissolve'][Math.floor(Math.random() * 10)]
 		if (mode === 'snap') {
-			p.preset = (p.preset + 1) % COLOR_PRESETS.length
+			p.preset = this.pickNext(p.preset)
 			this.transition = null   // a pending transition must not keep running
 			this.onPresetAdvanced?.(p.preset)
 			return
 		}
-		this.transition = { mode, t: 0 }
+		// The target is drawn ONCE here and stored- update() runs every frame
+		// and a per-frame draw would flicker the destination palette.
+		this.transition = { mode, t: 0, to: this.pickNext(p.preset) }
 	}
 
 	// Advance the running transition; returns the current mix factor (0..1).
@@ -124,7 +134,7 @@ export default class Autopilot {
 		// `params.autopilot.preset` stays the source of truth, advanced +
 		// mirrored into the GUI dropdown when a transition lands.
 		const cur = p.autopilot.preset
-		const nxt = (cur + 1) % COLOR_PRESETS.length
+		const nxt = this.transition ? this.transition.to : cur   // no transition: f stays 0, B is inert
 		let A = COLOR_PRESETS[cur]
 		let B = COLOR_PRESETS[nxt]
 		let f = 0
