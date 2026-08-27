@@ -37,18 +37,18 @@ export const COLOR_PRESETS = [
 	},
 	{
 		// Golden heaven: warm gold zenith dissolving into cream light, gilded
-		// clouds- the divine card. Violet rim so the body still pops in the glow.
+		// clouds- the divine card. Royal-blue rim: the classic gold pairing.
 		name: 'Paradise',
 		skyTop: new THREE.Color(0xf0c568), skyBottom: new THREE.Color(0xfff3d6),
 		skyCloudColor: new THREE.Color(0xfff8e8), cloudsColor: new THREE.Color(0xf2dca6),
-		bodyRim: new THREE.Color(0x7d5cff),
+		bodyRim: new THREE.Color(0x2f6bff),
 	},
 	{
 		// Cold pale morning: gray-blue zenith over a peach glow, warm gray clouds.
 		name: 'Dawn',
 		skyTop: new THREE.Color(0x6f8fb0), skyBottom: new THREE.Color(0xf6d3b5),
 		skyCloudColor: new THREE.Color(0xf0e3d8), cloudsColor: new THREE.Color(0xd9c7bd),
-		bodyRim: new THREE.Color(0xff4d6d),
+		bodyRim: new THREE.Color(0xffab3d),
 	},
 	{
 		// Gradient un-inverted: dusky mauve zenith over a glowing orange horizon
@@ -59,11 +59,11 @@ export const COLOR_PRESETS = [
 		bodyRim: new THREE.Color(0x21d9ff),
 	},
 	{
-		// Bubblegum dream: lavender over pink, mint rim cutting the sweetness.
+		// Bubblegum dream: lavender over pink, candy-blue rim.
 		name: 'Candy',
 		skyTop: new THREE.Color(0xb06ad4), skyBottom: new THREE.Color(0xffc2e0),
 		skyCloudColor: new THREE.Color(0xffe6f4), cloudsColor: new THREE.Color(0xf7c9e8),
-		bodyRim: new THREE.Color(0x29ffd2),
+		bodyRim: new THREE.Color(0x38b6ff),
 	},
 	{
 		name: 'Twilight',
