@@ -18,6 +18,11 @@ export default {
 		shockR: { value: 0 },     // shockwave ring radius (aspect-corrected screen units)
 		shockAmp: { value: 0 },   // shockwave displacement strength
 		aspect: { value: 1 },
+		// Selective-bloom layer, added at the warped uv so the glow bends with
+		// the lens instead of floating over it; bloomOn gates the add so the
+		// stale target of an inactive bloom never leaks in.
+		bloomTexture: { value: null },
+		bloomOn: { value: 0 },
 	},
 	vertexShader: /* glsl */`
 		varying vec2 vUv;
@@ -34,6 +39,8 @@ export default {
 		uniform float shockR;
 		uniform float shockAmp;
 		uniform float aspect;
+		uniform sampler2D bloomTexture;
+		uniform float bloomOn;
 		varying vec2 vUv;
 		void main() {
 			vec2 c = vUv - 0.5;
@@ -53,9 +60,22 @@ export default {
 				chroma = rd * ring * shockAmp * 0.5;
 			}
 			vec4 base = texture2D( tDiffuse, uv );
-			float cr = texture2D( tDiffuse, clamp( uv + off + chroma, 0.0, 1.0 ) ).r;
-			float cb = texture2D( tDiffuse, clamp( uv - off - chroma, 0.0, 1.0 ) ).b;
-			gl_FragColor = vec4( cr, base.g, cb, base.a );
+			vec2 uvR = clamp( uv + off + chroma, 0.0, 1.0 );
+			vec2 uvB = clamp( uv - off - chroma, 0.0, 1.0 );
+			float cr = texture2D( tDiffuse, uvR ).r;
+			float cb = texture2D( tDiffuse, uvB ).b;
+			// The bloom gets the SAME per-channel shift as the base- sampling the
+			// sum equals summing the samples, so this matches the old
+			// merge-before-lens pipeline exactly. Added unshifted instead, thin
+			// bright rims go green: the R/B taps land beside the un-haloed line
+			// and lose the glow that used to fill them.
+			vec3 bloom = vec3(
+				texture2D( bloomTexture, uvR ).r,
+				texture2D( bloomTexture, uv ).g,
+				texture2D( bloomTexture, uvB ).b
+			) * bloomOn;
+			vec3 col = vec3( cr, base.g, cb ) + bloom;
+			gl_FragColor = vec4( col, base.a );
 		}
 	`,
 }

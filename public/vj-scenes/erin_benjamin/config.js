@@ -92,6 +92,9 @@ export function createDefaultParams() {
 		// Drop impact: shock = the expanding lens shockwave's displacement;
 		// kick = the single hard camera hit; punch = the fov zoom snap.
 		drop: { shock: 0.06, kick: 1.0, punch: 1.0 },
+		// THE master perf lever: cap on the devicePixelRatio used by the whole
+		// render chain- fragment cost scales with its SQUARE (2 → 1.5 ≈ -44%).
+		quality: { renderScale: 2 },
 		// Rare animation events (backflip / backfalling): low chance + long
 		// cooldown on the hard kicks ⇒ roughly one event every 1.5-2.5 min.
 		// Rarity is the point.

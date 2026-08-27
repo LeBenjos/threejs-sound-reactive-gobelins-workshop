@@ -75,6 +75,16 @@ export default {
 			}
 			return v;
 		}
+		// 3-octave variant for the smoothstepped channels- the warp displacement,
+		// the mass-gated detail field and the self-shadow probe all land inside
+		// wide smoothstep windows where the two missing high octaves are invisible,
+		// and this runs fullscreen so the trimmed octaves are real ALU. The full
+		// 5-octave fbm must stay on the mass field: it sets the cloud silhouette.
+		// +0.046875 restores the dropped octaves' expected value, so deltas
+		// against the 5-octave fbm keep an unbiased mean.
+		float fbm3( vec2 p ) {
+			return 0.5 * noise( p ) + 0.25 * noise( p * 2.0 ) + 0.125 * noise( p * 4.0 ) + 0.046875;
+		}
 
 		void main() {
 			// Aspect correction keeps clouds round; subtracting from y samples lower
@@ -130,10 +140,10 @@ export default {
 			// Churn drifts UPWARD (-churnTime): with +churnTime the boil sank
 			// against the scroll, and in breakdowns (scroll near its floor) the
 			// sky's own cumulus visibly dripped downward.
-			vec2 warp = vec2( fbm( m + vec2( 0.0, -churnTime ) ), fbm( m + vec2( 5.2, 1.3 - churnTime ) ) );
+			vec2 warp = vec2( fbm3( m + vec2( 0.0, -churnTime ) ), fbm3( m + vec2( 5.2, 1.3 - churnTime ) ) );
 			vec2 mw = m + ( warp - 0.5 ) * 1.2;
 			float mass = fbm( mw );
-			float detail = fbm( uv * cloudScale + vec2( 37.2, 11.7 ) );
+			float detail = fbm3( uv * cloudScale + vec2( 37.2, 11.7 ) );
 			float density = mass + ( detail - 0.5 ) * 0.55 * mass;
 			// coverageShift raises the window at high energy: only the dense FBM
 			// cores survive, so the sky gradient stays visible behind the speed
@@ -142,7 +152,7 @@ export default {
 			// Top-lit self-shadowing: a denser field just above means this pixel is
 			// an underside. The shadow tint comes from the preset palette (cloud
 			// color pulled toward skyTop), so the color cycle carries through.
-			float above = fbm( mw + vec2( 0.0, 0.12 * cloudScale * 0.35 ) );
+			float above = fbm3( mw + vec2( 0.0, 0.12 * cloudScale * 0.35 ) );
 			float shadow = smoothstep( 0.0, 0.25, above - mass ) * 0.55;
 			vec3 shadowCol = mix( cloudC, topC, 0.45 ) * 0.8;
 			vec3 cloudCol = mix( cloudC * brightness, shadowCol, shadow );

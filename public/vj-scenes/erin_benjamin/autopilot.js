@@ -35,6 +35,17 @@ export default class Autopilot {
 		this.onPresetAdvanced = null   // wired by the scene- lets the GUI mirror the cycle
 	}
 
+	// Normalized sine [-1, 1] and [0, 1] over this.phase- period in seconds (at
+	// speed=1). Methods, not per-update closures- update() runs in the hot loop
+	// and must allocate nothing.
+	osc(period, off = 0) {
+		return Math.sin(this.phase * (Math.PI * 2) / period + off)
+	}
+
+	osc01(period, off = 0) {
+		return this.osc(period, off) * 0.5 + 0.5
+	}
+
 	// Abort any running transition (manual GUI picks call this).
 	resetPresetTimer() {
 		this.transition = null
@@ -85,31 +96,27 @@ export default class Autopilot {
 
 	update(dt) {
 		this.phase += dt * this.params.autopilot.speed
-		const phase = this.phase
-		// Normalized sine [-1, 1] and [0, 1] helpers- period in seconds (at speed=1).
-		const osc = (period, off = 0) => Math.sin(phase * (Math.PI * 2) / period + off)
-		const osc01 = (period, off = 0) => osc(period, off) * 0.5 + 0.5
 
 		const p = this.params
 
 		// Camera bob amplitude sweep (framing- radius/height- now belongs to the
 		// Director, which hard-cuts between shots).
-		p.camera.verticalAmp = 0.4 + osc01(19, 0.4) * 0.9
+		p.camera.verticalAmp = 0.4 + this.osc01(19, 0.4) * 0.9
 
 		// Sky atmosphere- scale + brightness baseline pulse.
-		p.sky.cloudScale = 6.0 + osc(40, 0.2) * 3.0
-		p.sky.brightnessBase = 0.55 + osc01(22, 2.1) * 0.4
+		p.sky.cloudScale = 6.0 + this.osc(40, 0.2) * 3.0
+		p.sky.brightnessBase = 0.55 + this.osc01(22, 2.1) * 0.4
 
 		// Cloud field veil density.
-		p.clouds.opacity = 0.75 + osc(14, 1.1) * 0.2
+		p.clouds.opacity = 0.75 + this.osc(14, 1.1) * 0.2
 
 		// Lens dynamics- bloom shape + lens distortion + RGB rotation. The bloom
 		// threshold must stay ABOVE the white body's ~0.70 max luminance (see
 		// config) so only the rim-boosted edges ever bloom.
-		p.bloom.radius = 0.35 + osc(18, 0.6) * 0.2
-		p.bloom.threshold = 0.8 + osc01(24, 0.9) * 0.15
-		p.fisheye.strengthBase = 0.6 + osc(28, 2.4) * 0.6
-		p.rgbShift.angle = (phase * 0.4) % (Math.PI * 2)
+		p.bloom.radius = 0.35 + this.osc(18, 0.6) * 0.2
+		p.bloom.threshold = 0.8 + this.osc01(24, 0.9) * 0.15
+		p.fisheye.strengthBase = 0.6 + this.osc(28, 2.4) * 0.6
+		p.rgbShift.angle = (this.phase * 0.4) % (Math.PI * 2)
 
 		if (!p.autopilot.colorCycle) return
 

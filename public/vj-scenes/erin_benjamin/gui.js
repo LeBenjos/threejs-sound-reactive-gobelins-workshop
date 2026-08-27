@@ -41,6 +41,10 @@ export default class Gui {
 		this.pane.addBinding(this.scene.director.state, 'shot', { readonly: true, label: 'shot en cours' })
 		this.pane.addBinding(this.scene.events.state, 'last', { readonly: true, label: 'dernier event' })
 
+		// THE master perf slider- render resolution cap (see PostFX.setRenderScale).
+		this.pane.addBinding(params.quality, 'renderScale', { min: 1, max: 2, step: 0.25, label: 'render scale' })
+			.on('change', (ev) => this.scene.postfx.setRenderScale(ev.value))
+
 		// Live meters of the derived signals + their calibration. Watch `energy`
 		// while the track plays: it should hug 0 in quiet passages and ~1 on drops-
 		// adjust quiet/loud until it does.

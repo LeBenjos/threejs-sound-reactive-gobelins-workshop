@@ -37,8 +37,15 @@ const RayShader = {
 		varying float vSeed;
 		void main() {
 			// Light falls from above: bright toward the top, dissolving downward,
-			// soft on the top edge and across the width.
-			float envY = pow( vUv.y, 1.6 ) * smoothstep( 1.0, 0.82, vUv.y );
+			// soft on the top edge and across the width. The quad covers only
+			// the [0.19, 0.81] slice of the full 0-to-1 fade span- the trimmed
+			// extremes sit under the discard threshold and would only burn
+			// additive blend bandwidth, so uv is remapped into the slice
+			// instead (the shaft heights in build() are sized to this slice).
+			// The slice does not reach zero at the quad edges, so each edge
+			// carries its own guard fade to keep the border from printing a
+			// hard line.
+			float envY = pow( 0.19 + 0.62 * vUv.y, 1.6 ) * smoothstep( 1.0, 0.82, vUv.y ) * smoothstep( 0.0, 0.05, vUv.y );
 			float across = 1.0 - abs( vUv.x - 0.5 ) * 2.0;
 			float breath = 0.55 + 0.45 * sin( time * 0.2 + vSeed * 20.0 );
 			float alpha = envY * across * across * breath * globalOpacity;
@@ -74,7 +81,7 @@ export default class Rays {
 			ray[i * 3 + 1] = 8 + Math.random() * 28
 			ray[i * 3 + 2] = Math.random()
 			size[i * 2] = 1.5 + Math.random() * 4.5
-			size[i * 2 + 1] = 55 + Math.random() * 45
+			size[i * 2 + 1] = 35 + Math.random() * 25   // paired with the fragment envelope's uv slice- resize both together
 		}
 		const geometry = new THREE.InstancedBufferGeometry()
 		geometry.index = this.baseGeometry.index

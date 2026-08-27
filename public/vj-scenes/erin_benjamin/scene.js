@@ -42,8 +42,8 @@ export default class ErinBenjaminScene {
 	}
 
 	init() {
-		this.renderer = new THREE.WebGLRenderer({ antialias: true })
-		this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+		this.renderer = new THREE.WebGLRenderer({ antialias: false }) // no MSAA- every frame goes through EffectComposer targets, the canvas only shows the OutputPass quad
+		this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.params.quality.renderScale))
 		this.renderer.setSize(innerWidth, innerHeight)
 		document.body.appendChild(this.renderer.domElement)
 

@@ -71,6 +71,7 @@ export default class CameraRig {
 		// slight lag (handheld feel- snap on the cut itself).
 		if (this.trackShot && this.body) {
 			const t = this.trackShot
+			this.body.updateAnchors()   // one bone-chain composition serves every getter below
 			this.body.getHeadPosition(this.headPos)
 			this.body.getHeadQuaternion(this.headQuat)
 			this.faceDir.copy(this.faceAxis).applyQuaternion(this.headQuat).normalize()

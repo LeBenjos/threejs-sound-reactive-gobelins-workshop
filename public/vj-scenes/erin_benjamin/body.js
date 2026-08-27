@@ -45,22 +45,45 @@ export default class Body {
 		this.lightScratch = new THREE.Vector3()
 		this.headBone = null   // found in init()- anchors for the tracked camera shots
 		this.handBone = null
+		this.actionList = []   // frozen in init()- iterated per frame, so no Object.values() there
+		// World-space anchor cache filled by updateAnchors()- the getters below
+		// only copy from it, never touch the bone chain.
+		this.headPosWorld = new THREE.Vector3(0, 0.8, 0)
+		this.handPosWorld = new THREE.Vector3(0, 0.8, 0)
+		this.headQuatWorld = new THREE.Quaternion()
+		this.scaleScratch = new THREE.Vector3()
+	}
+
+	// Compose the bone chains ONCE and cache the anchor transforms- the tracked
+	// camera reads head position, head orientation and hand position in the same
+	// frame, and each getWorldX() call re-composes the whole chain. The caller
+	// (the rig, on tracked frames only) must invoke this after the mixer update
+	// AND the pivot's drift/scale writes, so the cache matches the frame's pose.
+	updateAnchors() {
+		if (this.headBone) {
+			this.headBone.updateWorldMatrix(true, false)
+			this.headBone.matrixWorld.decompose(this.headPosWorld, this.headQuatWorld, this.scaleScratch)
+		}
+		if (this.handBone) {
+			this.handBone.updateWorldMatrix(true, false)
+			this.handPosWorld.setFromMatrixPosition(this.handBone.matrixWorld)
+		}
 	}
 
 	getHandPosition(target) {
-		if (this.handBone) return this.handBone.getWorldPosition(target)
+		if (this.handBone) return target.copy(this.handPosWorld)
 		return this.getHeadPosition(target)   // fallback: track the head instead
 	}
 
 	// Head world position/orientation for the face shot (fallback: rough head
-	// height at the pivot). Called after the mixer update, so poses are current.
+	// height at the pivot). Valid only after updateAnchors() ran this frame.
 	getHeadPosition(target) {
-		if (this.headBone) return this.headBone.getWorldPosition(target)
+		if (this.headBone) return target.copy(this.headPosWorld)
 		return target.set(0, 0.8, 0)
 	}
 
 	getHeadQuaternion(target) {
-		if (this.headBone) return this.headBone.getWorldQuaternion(target)
+		if (this.headBone) return target.copy(this.headQuatWorld)
 		return target.identity()
 	}
 
@@ -133,6 +156,7 @@ export default class Body {
 			})
 			this.actions.falling.play()
 			this.currentAction = this.actions.falling
+			this.actionList = Object.values(this.actions)   // no action is created after init
 		}
 	}
 
@@ -187,6 +211,15 @@ export default class Body {
 			const s = this.params.body.slowMo
 			this.mixer.timeScale = features.rate * (s + (1 - s) * features.energy)
 			this.mixer.update(dt)
+			// A crossfaded-out action stays scheduled and keeps sampling its
+			// tracks at weight zero- release it once its fade has landed. The
+			// mixer-time guard keeps a fade scheduled THIS frame (still at
+			// weight zero until time advances) alive.
+			if (dt * this.mixer.timeScale > 0) {
+				for (const action of this.actionList) {
+					if (action !== this.currentAction && action.isScheduled() && action.getEffectiveWeight() === 0) action.stop()
+				}
+			}
 		}
 		// Held event (flying) running out → glide back to the base fall.
 		if (this.eventTimer > 0) {

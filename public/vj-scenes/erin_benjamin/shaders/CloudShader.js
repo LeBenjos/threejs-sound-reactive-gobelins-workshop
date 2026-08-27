@@ -25,21 +25,46 @@ export default {
 		aspect: { value: 1 },
 	},
 	vertexShader: /* glsl */`
+		uniform float time;
 		attribute vec3 aOffset;
 		attribute vec2 aScale;
 		attribute vec3 aSprite;   // x: seed · y: noise rotation · z: shadow depth
 		attribute float aFade;    // band-edge envelope, updated per frame
 		varying vec2 vUv;
 		varying vec3 vViewPos;
-		varying vec3 vSprite;
+		varying float vShadowMult;
 		varying float vFade;
-		varying float vScale;
 		varying vec4 vClip;
+		varying vec2 vW;
+		varying vec2 vChurnOff;
+		varying vec2 vProbeOff;
 		void main() {
 			vUv = uv;
-			vSprite = aSprite;
+			vShadowMult = aSprite.z;
 			vFade = aFade;
-			vScale = aScale.y;
+			// Per-sprite rotation of the noise domain- breaks the clone look
+			// without touching the (screen-up) lighting fed by vProbeOff.
+			float ca = cos( aSprite.y );
+			float sa = sin( aSprite.y );
+			vec2 p = uv - 0.5;
+			vec2 seedOff = vec2( aSprite.x * 7.3, aSprite.x * 2.1 );
+			// Rotated+scaled noise domain- affine in uv, so the varying
+			// interpolates to the exact per-pixel value.
+			vW = vec2( ca * p.x - sa * p.y, sa * p.x + ca * p.y ) * 3.0 + seedOff;
+			// Churn clock offset for the fragment's domain warp (energy-driven
+			// clock, integrated in clouds.js). It is (a) COUNTER-ROTATED into
+			// the noise domain (same construction as vProbeOff) so the drift
+			// reads as screen-UP for every sprite- unrotated, each sprite
+			// drifted in a random direction and half the field visibly sank-
+			// and (b) divided by the sprite scale so the world-equivalent
+			// drift speed is identical for a 1-unit puff and a 45-unit
+			// backdrop giant (unscaled, the drift out-ran the far layers'
+			// real rise 10-90x). Per-instance constant, so it interpolates
+			// flat as a varying.
+			vChurnOff = vec2( sa, -ca ) * ( time / aScale.y );
+			// Lighting-probe offset- counter-rotated so the probe samples
+			// screen-up regardless of the sprite's noise rotation.
+			vProbeOff = vec2( -sa, ca ) * 0.48;
 			// The group carries the camera's vertical lock- bring the anchor
 			// through the model matrix before billboarding around it.
 			vec3 anchor = ( modelMatrix * vec4( aOffset, 1.0 ) ).xyz;
@@ -58,7 +83,6 @@ export default {
 	`,
 	fragmentShader: /* glsl */`
 		uniform float opacity;
-		uniform float time;
 		uniform vec3 cloudColor;
 		uniform vec3 shadowColor;
 		uniform vec3 hazeColor;
@@ -71,10 +95,12 @@ export default {
 		uniform float aspect;
 		varying vec2 vUv;
 		varying vec3 vViewPos;
-		varying vec3 vSprite;
+		varying float vShadowMult;
 		varying float vFade;
-		varying float vScale;
 		varying vec4 vClip;
+		varying vec2 vW;
+		varying vec2 vChurnOff;
+		varying vec2 vProbeOff;
 
 		float hash( vec2 p ) {
 			return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 );
@@ -99,6 +125,14 @@ export default {
 			}
 			return v;
 		}
+		// 3-octave variant for the domain warp- the warp only displaces the
+		// domain of the 4-octave density fbm, where the missing top octave is
+		// sub-pixel, and the field is the scene's biggest fragment cost.
+		// +0.03125 restores the dropped octave's expected value, so the
+		// ( warp - 0.5 ) remap keeps an unbiased mean.
+		float fbm3( vec2 p ) {
+			return 0.5 * noise( p ) + 0.25 * noise( p * 2.0 ) + 0.125 * noise( p * 4.0 ) + 0.03125;
+		}
 		// 2-octave variant for the shading probe- the shadow term is smoothstepped
 		// anyway, the missing high octaves are invisible there and it cuts the
 		// sprite's ALU noticeably (the field is the scene's biggest fragment cost).
@@ -109,9 +143,22 @@ export default {
 		}
 
 		void main() {
-			float seed = vSprite.x;
-			float noiseRot = vSprite.y;
-			float shadowMult = vSprite.z;
+			// Aerial perspective: distant sprites melt toward the preset's horizon
+			// color and thin out- the depth turns milky instead of staying crisp
+			// to the last layer. THE dreamy ingredient.
+			float dist = length( vViewPos );
+			float haze = smoothstep( 25.0, 110.0, dist ) * hazeAmount;
+			// The close camera shots orbit INSIDE the near cloud band, so sprites
+			// can cross the lens: without this they pop in as huge dark blobs the
+			// instant the billboard flips past the camera. Dissolve them over the
+			// last 2 world units instead- fully gone before the near plane.
+			float nearFade = smoothstep( 0.7, 2.0, dist );
+			// Alpha ceiling from the noise-free factors only- body*puff never
+			// exceeds 1, so pixels that cannot reach the write threshold
+			// (band-faded sprites, lens-crossing sprites) bail before any
+			// noise octave runs.
+			float alphaCeil = opacity * vFade * nearFade * ( 1.0 - haze * 0.35 );
+			if ( alphaCeil < 0.01 ) discard;
 			// Spatial palette transitions: same screen-space metrics as the sky
 			// shader, so each front crosses background and sprites as ONE shape.
 			float wm = 0.0;
@@ -137,57 +184,44 @@ export default {
 			vec3 shadowColorM = mix( shadowColor, shadowColorB, wm );
 			vec3 hazeColorM = mix( hazeColor, hazeColorB, wm );
 			vec2 p = vUv - 0.5;
-			vec2 seedOff = vec2( seed * 7.3, seed * 2.1 );
-			// Per-sprite rotation of the noise domain- breaks the clone look
-			// without touching the (screen-up) lighting below.
-			float ca = cos( noiseRot );
-			float sa = sin( noiseRot );
-			vec2 w = vec2( ca * p.x - sa * p.y, sa * p.x + ca * p.y ) * 3.0 + seedOff;
 			// Domain warp: the field curls on itself- organic billows instead of
-			// raw noise- and time drifts the warp so the cloud churns from the
-			// inside (energy-driven clock, integrated in clouds.js).
-			// The clock offset is (a) COUNTER-ROTATED into the noise domain (same
-			// construction as the lighting probe below) so the drift reads as
-			// screen-UP for every sprite- unrotated, each sprite drifted in a
-			// random direction and half the field visibly sank- and (b) divided
-			// by the sprite scale so the world-equivalent drift speed is identical
-			// for a 1-unit puff and a 45-unit backdrop giant (unscaled, the drift
-			// out-ran the far layers' real rise 10-90x).
-			float tS = time / vScale;
-			vec2 churnOff = vec2( sa, -ca ) * tS;
-			vec2 warp = vec2( fbm( w + churnOff ), fbm( w + vec2( 5.2, 1.3 ) + churnOff ) );
-			float n = fbm( w + ( warp - 0.5 ) * 1.4 );
+			// raw noise- and vChurnOff drifts the warp so the cloud churns from
+			// the inside (screen-up, scale-normalized- see the vertex stage).
+			vec2 warp = vec2( fbm3( vW + vChurnOff ), fbm3( vW + vec2( 5.2, 1.3 ) + vChurnOff ) );
+			float n = fbm( vW + ( warp - 0.5 ) * 1.4 );
 			// FBM-warped radius: the silhouette turns jagged and organic instead of
 			// showing the quad's circular falloff. Dense core, soft ragged edge.
 			float r = length( p ) * 2.0 + ( n - 0.5 ) * 0.8;
 			float body = 1.0 - smoothstep( 0.1, 0.95, r );
 			float puff = smoothstep( 0.16, 0.55, n );
-			// Top-lit modeling, same rule as the sky shader: a denser field just
-			// above means this pixel is an underside. The offset is rotated into
-			// the noise domain so "up" stays screen-up, and the smooth warp is
-			// reused- close enough at this distance. (1-vUv.y) biases the lower
-			// half darker.
-			float above = fbm2( w + vec2( -sa, ca ) * 0.48 + ( warp - 0.5 ) * 1.4 );
-			float delta = n - above;
-			float shadow = min( 1.0, ( smoothstep( 0.0, 0.3, -delta ) * 0.6 + ( 1.0 - vUv.y ) * 0.25 ) * shadowMult );
+			float shadow;
+			float lining;
+			// The probe and lining only shape terms the haze mix washes out at
+			// this distance; haze is ~constant across one sprite, so the branch
+			// is per-sprite coherent- no divergence inside a sprite.
+			if ( haze > 0.6 ) {
+				// Flat-mean stand-in for the probe (delta ~ 0): shadow keeps
+				// only its vertical bias, the lining stays dark.
+				shadow = min( 1.0, ( 1.0 - vUv.y ) * 0.25 * vShadowMult );
+				lining = 0.0;
+			} else {
+				// Top-lit modeling, same rule as the sky shader: a denser field just
+				// above means this pixel is an underside. The offset is rotated into
+				// the noise domain so "up" stays screen-up, and the smooth warp is
+				// reused- close enough at this distance. (1-vUv.y) biases the lower
+				// half darker.
+				float above = fbm2( vW + vProbeOff + ( warp - 0.5 ) * 1.4 );
+				float delta = n - above;
+				shadow = min( 1.0, ( smoothstep( 0.0, 0.3, -delta ) * 0.6 + ( 1.0 - vUv.y ) * 0.25 ) * vShadowMult );
+				// Silver lining: where density drops toward the light (delta > 0) the
+				// top edge catches it- pushed toward white so it reads as sun, echoing
+				// the body's rim language.
+				lining = smoothstep( 0.1, 0.4, delta ) * ( 1.0 - shadow );
+			}
 			vec3 col = mix( cloudColorM, shadowColorM, shadow );
-			// Silver lining: where density drops toward the light (delta > 0) the
-			// top edge catches it- pushed toward white so it reads as sun, echoing
-			// the body's rim language.
-			float lining = smoothstep( 0.1, 0.4, delta ) * ( 1.0 - shadow );
 			col += mix( cloudColorM, vec3( 1.0 ), 0.5 ) * lining * 0.3;
-			// Aerial perspective: distant sprites melt toward the preset's horizon
-			// color and thin out- the depth turns milky instead of staying crisp
-			// to the last layer. THE dreamy ingredient.
-			float dist = length( vViewPos );
-			float haze = smoothstep( 25.0, 110.0, dist ) * hazeAmount;
 			col = mix( col, hazeColorM, haze );
-			// The close camera shots orbit INSIDE the near cloud band, so sprites
-			// can cross the lens: without this they pop in as huge dark blobs the
-			// instant the billboard flips past the camera. Dissolve them over the
-			// last 2 world units instead- fully gone before the near plane.
-			float nearFade = smoothstep( 0.7, 2.0, dist );
-			float alpha = body * puff * opacity * vFade * nearFade * ( 1.0 - haze * 0.35 );
+			float alpha = body * puff * alphaCeil;
 			if ( alpha < 0.01 ) discard;   // avoid sorting artifacts on near-empty pixels
 			gl_FragColor = vec4( col, alpha );
 		}
