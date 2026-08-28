@@ -38,13 +38,13 @@ export default class Gui {
 
 		// Always-visible monitors (the folders below are collapsed): the shot the
 		// director is holding right now, and the last animation event fired.
-		this.pane.addBinding(this.scene.director.state, 'shot', { readonly: true, label: 'shot en cours' })
-		this.pane.addBinding(this.scene.events.state, 'last', { readonly: true, label: 'dernier event' })
+		this.pane.addBinding(this.scene.director.state, 'shot', { readonly: true, label: 'current shot' })
+		this.pane.addBinding(this.scene.events.state, 'last', { readonly: true, label: 'last event' })
 
 		// Wind test knob- leans the whole fall (sky, clouds, streaks), degrees
 		// from vertical, screen-coherent. 0 = the pure vertical contract.
 		const windFolder = this.pane.addFolder({ title: 'Wind' })
-		windFolder.addBinding(params.wind, 'auto', { label: 'directeur auto' })
+		windFolder.addBinding(params.wind, 'auto', { label: 'auto director' })
 		// Manual when auto is off; while auto runs, the director overwrites the
 		// value each frame (the slider then shows its last drawn state only).
 		windFolder.addBinding(params.wind, 'angle', { min: -60, max: 60, step: 1, label: 'angle (°)' })
@@ -64,37 +64,37 @@ export default class Gui {
 		audioFolder.addBinding(features, 'bpm', { readonly: true, view: 'graph', min: 60, max: 200 })
 		audioFolder.addBinding(features, 'rate', { readonly: true, view: 'graph', min: 0.5, max: 1.6 })
 		audioFolder.addBinding(features, 'dropPulse', { readonly: true, view: 'graph', min: 0, max: 1 })
-		// Énergie: où placer le "calme" et le "fort" dans la dynamique du morceau,
-		// et à quelle vitesse la scène s'excite / se calme.
-		const nrj = audioFolder.addFolder({ title: 'Énergie (calibrage)' })
-		nrj.addBinding(params.audio, 'quiet', { min: 0, max: 1, step: 0.01, label: 'seuil calme ↓' })
-		nrj.addBinding(params.audio, 'loud', { min: 0.1, max: 1, step: 0.01, label: 'seuil fort ↑' })
-		nrj.addBinding(params.audio, 'attack', { min: 0.05, max: 2, step: 0.05, label: 'montée (s)' })
-		nrj.addBinding(params.audio, 'release', { min: 0.2, max: 6, step: 0.1, label: 'retombée (s)' })
-		nrj.addBinding(params.audio, 'floor', { min: 0, max: 0.6, step: 0.01, label: 'fond au silence' })
-		// Tempo: la fourchette de BPM attendue, et la vitesse du monde qui en découle.
-		const tempo = audioFolder.addFolder({ title: 'Tempo → vitesse' })
-		tempo.addBinding(params.audio, 'bpmSlow', { min: 50, max: 140, step: 1, label: 'bpm lent =' })
-		tempo.addBinding(params.audio, 'bpmFast', { min: 90, max: 220, step: 1, label: 'bpm rapide =' })
-		tempo.addBinding(params.audio, 'rateMin', { min: 0.3, max: 1, step: 0.05, label: '→ vitesse mini' })
-		tempo.addBinding(params.audio, 'rateMax', { min: 1, max: 2.5, step: 0.05, label: '→ vitesse maxi' })
+		// Energy: where "quiet" and "loud" sit inside the track's dynamics, and
+		// how fast the scene ramps up / settles down.
+		const nrj = audioFolder.addFolder({ title: 'Energy (calibration)' })
+		nrj.addBinding(params.audio, 'quiet', { min: 0, max: 1, step: 0.01, label: 'quiet threshold ↓' })
+		nrj.addBinding(params.audio, 'loud', { min: 0.1, max: 1, step: 0.01, label: 'loud threshold ↑' })
+		nrj.addBinding(params.audio, 'attack', { min: 0.05, max: 2, step: 0.05, label: 'attack (s)' })
+		nrj.addBinding(params.audio, 'release', { min: 0.2, max: 6, step: 0.1, label: 'release (s)' })
+		nrj.addBinding(params.audio, 'floor', { min: 0, max: 0.6, step: 0.01, label: 'silence floor' })
+		// Tempo: the expected BPM range, and the world speed derived from it.
+		const tempo = audioFolder.addFolder({ title: 'Tempo → speed' })
+		tempo.addBinding(params.audio, 'bpmSlow', { min: 50, max: 140, step: 1, label: 'slow bpm =' })
+		tempo.addBinding(params.audio, 'bpmFast', { min: 90, max: 220, step: 1, label: 'fast bpm =' })
+		tempo.addBinding(params.audio, 'rateMin', { min: 0.3, max: 1, step: 0.05, label: '→ min speed' })
+		tempo.addBinding(params.audio, 'rateMax', { min: 1, max: 2.5, step: 0.05, label: '→ max speed' })
 
 		const auto = this.pane.addFolder({ title: 'Autopilot', expanded: false })
 		auto.addBinding(params.autopilot, 'enabled')
 		auto.addBinding(params.autopilot, 'speed', { min: 0, max: 3, step: 0.01 })
-		auto.addBinding(params.autopilot, 'colorCycle', { label: 'couleurs sur les drops' })
+		auto.addBinding(params.autopilot, 'colorCycle', { label: 'colors on drops' })
 		// Fires the REAL drop path (flash + palette transition + camera accent)
 		// via the same rising edge the detector uses- for auditioning the
 		// transition styles without waiting for the music to provide drops.
-		auto.addButton({ title: '⚡ simuler un drop' }).on('click', () => {
+		auto.addButton({ title: '⚡ simulate a drop' }).on('click', () => {
 			features.dropPulse = 1
 		})
-		auto.addBinding(params.drop, 'shock', { min: 0, max: 0.2, step: 0.005, label: 'onde de choc' })
-		auto.addBinding(params.drop, 'kick', { min: 0, max: 3, step: 0.05, label: 'coup caméra' })
+		auto.addBinding(params.drop, 'shock', { min: 0, max: 0.2, step: 0.005, label: 'shockwave' })
+		auto.addBinding(params.drop, 'kick', { min: 0, max: 3, step: 0.05, label: 'camera kick' })
 		auto.addBinding(params.drop, 'punch', { min: 0, max: 3, step: 0.05, label: 'zoom punch' })
 		auto.addBinding(params.autopilot, 'dropMode', {
-			label: 'transition drop',
-			options: { 'aléatoire': 'random', 'coupure': 'snap', 'flash blanc': 'flash', 'cercle centre': 'wipe', 'rideau montant': 'curtain', 'iris inversé': 'iris', 'dissolution': 'dissolve' },
+			label: 'drop transition',
+			options: { 'random': 'random', 'hard cut': 'snap', 'white flash': 'flash', 'center wipe': 'wipe', 'rising curtain': 'curtain', 'inverted iris': 'iris', 'dissolve': 'dissolve' },
 		})
 		// Manual preset selector- overridden live when colorCycle is on (the cycle
 		// keeps writing into the uniforms each frame).
@@ -190,11 +190,11 @@ export default class Gui {
 		events.addButton({ title: '🔄 backfalling' }).on('click', () => this.scene.events.trigger('backfalling'))
 		events.addButton({ title: '🌀 spin' }).on('click', () => this.scene.events.trigger('spin'))
 		// Global fx events- playable under any sky.
-		events.addButton({ title: '🪞 miroir brisé' }).on('click', () => this.scene.events.trigger('shatter'))
+		events.addButton({ title: '🪞 broken mirror' }).on('click', () => this.scene.events.trigger('shatter'))
 		events.addButton({ title: '📺 multicam' }).on('click', () => this.scene.events.trigger('multicam'))
-		events.addButton({ title: '🕴 chute collective' }).on('click', () => this.scene.events.trigger('crowdfall'))
-		events.addButton({ title: '🔳 écho droste' }).on('click', () => this.scene.events.trigger('echo'))
-		events.addButton({ title: '👥 jumeau miroir' }).on('click', () => this.scene.events.trigger('twin'))
+		events.addButton({ title: '🕴 crowd fall' }).on('click', () => this.scene.events.trigger('crowdfall'))
+		events.addButton({ title: '🔳 droste echo' }).on('click', () => this.scene.events.trigger('echo'))
+		events.addButton({ title: '👥 mirror twin' }).on('click', () => this.scene.events.trigger('twin'))
 		// Preset signatures: each button first snaps to the event's own sky
 		// (the signature only makes sense under it), then fires the full real
 		// path- staging included.
@@ -209,11 +209,11 @@ export default class Gui {
 				this.scene.events.trigger(eventName)
 			})
 		}
-		signature('⛈ éclair (Storm)', 'Storm', 'lightning')
-		signature('🌌 zéro-g (Cosmos)', 'Cosmos', 'zeroG')
-		signature('🌅 percée (Dawn)', 'Dawn', 'sunburst')
-		signature('🫧 apnée (Abyss)', 'Abyss', 'apnea')
-		signature('✨ 1ʳᵉ étoile (Twilight)', 'Twilight', 'firstStar')
+		signature('⛈ lightning (Storm)', 'Storm', 'lightning')
+		signature('🌌 zero-g (Cosmos)', 'Cosmos', 'zeroG')
+		signature('🌅 sunburst (Dawn)', 'Dawn', 'sunburst')
+		signature('🫧 apnea (Abyss)', 'Abyss', 'apnea')
+		signature('✨ first star (Twilight)', 'Twilight', 'firstStar')
 		events.addBinding(params.events, 'enabled')
 		events.addBinding(params.events, 'chance', { min: 0, max: 1, step: 0.05 })
 		events.addBinding(params.events, 'cooldown', { min: 0, max: 60, step: 1 })
@@ -242,15 +242,15 @@ export default class Gui {
 		lines.addBinding(params.lines, 'radius', { min: 1, max: 15, step: 0.5 })
 
 		const dreamy = this.pane.addFolder({ title: 'Dreamy', expanded: false })
-		dreamy.addBinding(params.motes, 'enabled', { label: 'poussières' })
+		dreamy.addBinding(params.motes, 'enabled', { label: 'motes' })
 		dreamy.addBinding(params.motes, 'count', { min: 0, max: 400, step: 1 }).on('change', (ev) => {
 			if (ev.last) this.scene.motes.rebuild()
 		})
 		dreamy.addBinding(params.motes, 'opacity', { min: 0, max: 1, step: 0.01 })
-		dreamy.addBinding(params.motes, 'rise', { min: 0, max: 4, step: 0.05, label: 'vitesse montée' })
+		dreamy.addBinding(params.motes, 'rise', { min: 0, max: 4, step: 0.05, label: 'rise speed' })
 		// Spawn-time param: new specks pick it up as they recycle (seconds)- no rebuild needed.
-		dreamy.addBinding(params.motes, 'radius', { min: 2, max: 12, step: 0.5, label: 'rayon' })
-		dreamy.addBinding(params.rays, 'enabled', { label: 'rayons' })
+		dreamy.addBinding(params.motes, 'radius', { min: 2, max: 12, step: 0.5, label: 'radius' })
+		dreamy.addBinding(params.rays, 'enabled', { label: 'rays' })
 		dreamy.addBinding(params.rays, 'count', { min: 0, max: 20, step: 1 }).on('change', (ev) => {
 			if (ev.last) this.scene.rays.rebuild()
 		})
@@ -264,7 +264,7 @@ export default class Gui {
 		skyFolder.addBinding(params.sky, 'cloudScale', { min: 0.5, max: 10, step: 0.1 })
 		skyFolder.addBinding(params.sky, 'brightnessBase', { min: 0, max: 1.5, step: 0.01 })
 		skyFolder.addBinding(params.sky, 'brightnessEnergyMult', { min: 0, max: 1.5, step: 0.01 })
-		skyFolder.addBinding(params.sky, 'midCoverage', { min: 0, max: 0.3, step: 0.01, label: 'médiums → nuages' })
+		skyFolder.addBinding(params.sky, 'midCoverage', { min: 0, max: 0.3, step: 0.01, label: 'mids → clouds' })
 		skyFolder.addBinding(params.sky, 'topColor', { view: 'color' }).on('change', (ev) => {
 			sky.uniforms.skyTop.value.set(ev.value)
 		})

@@ -128,12 +128,15 @@ export default {
 			// sum equals summing the samples, so this matches the old
 			// merge-before-lens pipeline exactly. Added unshifted instead, thin
 			// bright rims go green: the R/B taps land beside the un-haloed line
-			// and lose the glow that used to fill them.
-			vec3 bloom = vec3(
-				texture2D( bloomTexture, uvR ).r,
-				texture2D( bloomTexture, uv ).g,
-				texture2D( bloomTexture, uvB ).b
-			) * bloomOn;
+			// and lose the glow that used to fill them. Uniform branch: three
+			// fullscreen fetches skipped whenever the bloom gate is off.
+			vec3 bloom = vec3( 0.0 );
+			if ( bloomOn > 0.5 ) {
+				bloom = vec3(
+					texture2D( bloomTexture, uvR ).r,
+					texture2D( bloomTexture, uv ).g,
+					texture2D( bloomTexture, uvB ).b );
+			}
 			vec3 col = vec3( cr, base.g, cb ) + bloom;
 			if ( echoAmt > 0.001 ) {
 				// Body-only Droste: copies of the body grow around the real one,

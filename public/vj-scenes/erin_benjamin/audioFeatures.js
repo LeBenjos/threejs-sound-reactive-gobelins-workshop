@@ -276,7 +276,7 @@ export default class AudioFeatures {
 				console.log(`[drop] FIRE via ${dropBass ? 'bass' : dropBreath ? 'breath' : dropJump ? 'jump' : 'quiet'} @${this.time.toFixed(1)}s`)
 			} else if (((hot && !this._dbgWasHot) || bassSurge) && this._dbgTimer <= 0) {
 				this._dbgTimer = 2
-				console.log(`[drop] candidat SANS tir @${this.time.toFixed(1)}s` +
+				console.log(`[drop] candidate NOT fired @${this.time.toFixed(1)}s` +
 					`- bass=${this.bass.toFixed(2)} bassQuiet=${this.bassQuiet.toFixed(2)}/0.45` +
 					` quietTime=${this.quietTime.toFixed(2)}/0.5 energy=${this.energy.toFixed(2)}` +
 					` t=${t.toFixed(2)} tSlow=${this.tSlow.toFixed(2)} kickAgo=${this.kickAgo.toFixed(2)}` +

@@ -118,14 +118,18 @@ export default class PostFX {
 		this._bloomWanted = params.bloom.enabled
 		this._bloomActive = params.bloom.enabled
 		this._prevShatter = 0
-		this.resizeEchoTarget()
 	}
 
-	// The echo target mirrors the main composer's buffer size (window ×
-	// pixel-ratio cap)- called from the ctor, resize() and setRenderScale().
-	resizeEchoTarget() {
+	// Lazy echo target: it stays 1×1 (no VRAM) until the first echo event,
+	// then tracks the main buffer size (window × pixel-ratio cap). Called
+	// per-frame while the event runs- the size compare costs nothing and
+	// covers window resizes and render-scale changes mid-event. The target
+	// keeps its allocation between events: re-triggering must not hitch.
+	syncEchoTarget() {
 		const ratio = this.renderer.getPixelRatio()
-		this.echoTarget.setSize(Math.round(innerWidth * ratio), Math.round(innerHeight * ratio))
+		const w = Math.round(innerWidth * ratio)
+		const h = Math.round(innerHeight * ratio)
+		if (this.echoTarget.width !== w || this.echoTarget.height !== h) this.echoTarget.setSize(w, h)
 	}
 
 	// THE master perf lever: every fragment cost scales with pixelRatio². The
@@ -136,7 +140,6 @@ export default class PostFX {
 		this.renderer.setPixelRatio(ratio)
 		this.composer.setPixelRatio(ratio)
 		this.bloomComposer.setPixelRatio(ratio / 2)
-		this.resizeEchoTarget()
 	}
 
 	warmup() {
@@ -250,6 +253,7 @@ export default class PostFX {
 		// Echo event: the body alone on transparent black, same camera as the
 		// main render so the copies stay registered with the real body.
 		if (this._echoActive) {
+			this.syncEchoTarget()
 			this.renderer.getClearColor(_clearScratch)
 			const oldAlpha = this.renderer.getClearAlpha()
 			for (let i = 0; i < this.echoExclude.length; i++) {
@@ -272,7 +276,6 @@ export default class PostFX {
 	resize() {
 		this.composer.setSize(innerWidth, innerHeight)
 		this.bloomComposer.setSize(innerWidth, innerHeight)
-		this.resizeEchoTarget()
 	}
 
 }

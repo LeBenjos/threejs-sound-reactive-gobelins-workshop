@@ -1,4 +1,4 @@
-// The "réalisation", structured like a music video: the HOME state is the
+// The direction, structured like a music video: the HOME state is the
 // original floating orbit (slow LFO breathing on radius/height- it can hold
 // for a long time, with an occasional soft reframe), and on hard kicks the
 // camera PUNCHES to an accent shot- held a few seconds, then cut back to the

@@ -37,7 +37,7 @@ export default class DebugView {
 			this.camera.position.y += 2
 			this.controls.target.set(0, 0, 0)
 		}
-		console.log(`[debug-cam] ${this.enabled ? 'ON- orbite à la souris, rendu brut sans postfx, frustum du rig en fil de fer' : 'OFF'}`)
+		console.log(`[debug-cam] ${this.enabled ? 'ON- mouse orbit, raw render without postfx, rig frustum as wireframe' : 'OFF'}`)
 	}
 
 	render() {
