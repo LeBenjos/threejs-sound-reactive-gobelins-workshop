@@ -106,11 +106,15 @@ export default class Motes {
 	update(dt, features, camera) {
 		const p = this.params.motes
 		// More present when the music breathes- the calm counterpart of the lines.
-		const opacity = p.enabled ? p.opacity * (0.5 + 0.5 * (1 - features.energy)) : 0
+		// The motes boost channel (Cosmos zero-G, Twilight first star) turns the
+		// dust into a starfield: more presence, faster twinkle.
+		const opacity = p.enabled
+			? Math.min(1, p.opacity * (0.5 + 0.5 * (1 - features.energy)) * (1 + features.boost.motes))
+			: 0
 		this.mesh.visible = opacity >= 0.01
 		if (!this.mesh.visible) return
 		this.material.uniforms.globalOpacity.value = opacity
-		this.material.uniforms.time.value += dt
+		this.material.uniforms.time.value += dt * (1 + features.boost.motes)
 		const cx = camera.position.x
 		const cy = camera.position.y
 		const cz = camera.position.z

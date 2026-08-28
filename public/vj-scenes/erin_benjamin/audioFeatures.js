@@ -21,6 +21,13 @@ export default class AudioFeatures {
 		this.pace = 0.5   // bpm normalized between bpmSlow..bpmFast, eased
 		this.rate = 1     // global world-speed multiplier derived from pace
 		this.dropPulse = 0   // 1 on a detected drop, decays over ~0.7s
+		// FX boost channels- written by MusicEvents every frame (preset-signature
+		// event envelopes), not by the audio. Consumers: Wind (wind: 0..1 output
+		// flattening), Motes (motes: presence + twinkle), Rays (rays: opacity
+		// mult · raysCount: extra shafts), PostFX (bloom / afterimage adds,
+		// shatter / echo: LensShader amounts, multicam: grid-pass gate),
+		// Crowd (crowd: falling-clones presence).
+		this.boost = { wind: 0, motes: 0, rays: 0, raysCount: 0, bloom: 0, afterimage: 0, shatter: 0, echo: 0, multicam: 0, crowd: 0, twin: 0 }
 		this.quietTime = 0   // seconds spent below the quiet threshold
 		this.riseTime = 0    // seconds since the energy left the quiet zone
 		this.hotTime = 0     // seconds the INSTANT signal has been hot

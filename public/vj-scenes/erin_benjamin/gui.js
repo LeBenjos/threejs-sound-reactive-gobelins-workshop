@@ -189,6 +189,31 @@ export default class Gui {
 		events.addButton({ title: '🤸 backflip' }).on('click', () => this.scene.events.trigger('backflip'))
 		events.addButton({ title: '🔄 backfalling' }).on('click', () => this.scene.events.trigger('backfalling'))
 		events.addButton({ title: '🌀 spin' }).on('click', () => this.scene.events.trigger('spin'))
+		// Global fx events- playable under any sky.
+		events.addButton({ title: '🪞 miroir brisé' }).on('click', () => this.scene.events.trigger('shatter'))
+		events.addButton({ title: '📺 multicam' }).on('click', () => this.scene.events.trigger('multicam'))
+		events.addButton({ title: '🕴 chute collective' }).on('click', () => this.scene.events.trigger('crowdfall'))
+		events.addButton({ title: '🔳 écho droste' }).on('click', () => this.scene.events.trigger('echo'))
+		events.addButton({ title: '👥 jumeau miroir' }).on('click', () => this.scene.events.trigger('twin'))
+		// Preset signatures: each button first snaps to the event's own sky
+		// (the signature only makes sense under it), then fires the full real
+		// path- staging included.
+		const signature = (title, presetName, eventName) => {
+			events.addButton({ title }).on('click', () => {
+				const idx = COLOR_PRESETS.findIndex((pst) => pst.name === presetName)
+				if (idx >= 0 && params.autopilot.preset !== idx) {
+					params.autopilot.preset = idx
+					autopilot.resetPresetTimer()
+					this.applyColorPreset(idx)
+				}
+				this.scene.events.trigger(eventName)
+			})
+		}
+		signature('⛈ éclair (Storm)', 'Storm', 'lightning')
+		signature('🌌 zéro-g (Cosmos)', 'Cosmos', 'zeroG')
+		signature('🌅 percée (Dawn)', 'Dawn', 'sunburst')
+		signature('🫧 apnée (Abyss)', 'Abyss', 'apnea')
+		signature('✨ 1ʳᵉ étoile (Twilight)', 'Twilight', 'firstStar')
 		events.addBinding(params.events, 'enabled')
 		events.addBinding(params.events, 'chance', { min: 0, max: 1, step: 0.05 })
 		events.addBinding(params.events, 'cooldown', { min: 0, max: 60, step: 1 })

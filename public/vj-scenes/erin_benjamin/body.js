@@ -49,6 +49,11 @@ export default class Body {
 		this.lightScratch = new THREE.Vector3()
 		this.headBone = null   // found in init()- anchors for the tracked camera shots
 		this.handBone = null
+		this.hipsBone = null   // the body's visual center- anchors the echo event's screen projection
+		// Derived clips built in init()- shared with Crowd so the clones layer
+		// the same hips/limb weights over their one-shots as the hero does.
+		this.limbClip = null
+		this.hipsClip = null
 		this.actionList = []   // frozen in init()- iterated per frame, so no Object.values() there
 		// World-space anchor cache filled by updateAnchors()- the getters below
 		// only copy from it, never touch the bone chain.
@@ -119,6 +124,7 @@ export default class Body {
 			if (!o.isBone) return
 			if (!this.headBone && /head/i.test(o.name)) this.headBone = o
 			if (!this.handBone && /hand/i.test(o.name)) this.handBone = o
+			if (!this.hipsBone && /hips/i.test(o.name)) this.hipsBone = o
 		})
 		console.log(`[erin_benjamin] anchor bones: head=${this.headBone?.name ?? 'none'} hand=${this.handBone?.name ?? 'none'}`)
 		this.setMaterial(this.params.body.material)
@@ -141,13 +147,13 @@ export default class Body {
 			const falling = this.clips.falling
 			const limbTracks = falling.tracks.filter((t) => LIMB_RE.test(t.name))
 			if (limbTracks.length) {
-				this.actions.fallingLimbs = this.mixer.clipAction(
-					new THREE.AnimationClip('fallingLimbs', falling.duration, limbTracks))
+				this.limbClip = new THREE.AnimationClip('fallingLimbs', falling.duration, limbTracks)
+				this.actions.fallingLimbs = this.mixer.clipAction(this.limbClip)
 			}
 			const hipsTracks = falling.tracks.filter((t) => /Hips/i.test(t.name) && t.name.endsWith('.position'))
 			if (hipsTracks.length) {
-				this.actions.fallingHips = this.mixer.clipAction(
-					new THREE.AnimationClip('fallingHips', falling.duration, hipsTracks))
+				this.hipsClip = new THREE.AnimationClip('fallingHips', falling.duration, hipsTracks)
+				this.actions.fallingHips = this.mixer.clipAction(this.hipsClip)
 			}
 			// One-shots (backflip, spin): clamp on the last frame while fading back-
 			// the 'finished' listener triggers the return to falling by itself.

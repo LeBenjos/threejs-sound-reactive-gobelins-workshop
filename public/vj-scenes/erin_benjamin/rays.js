@@ -55,6 +55,10 @@ const RayShader = {
 	`,
 }
 
+// Extra shafts allocated up front for the Dawn sunburst (boost.raysCount)-
+// the spec's peak must stay at or under this.
+const BURST_RESERVE = 10
+
 export default class Rays {
 
 	constructor(scene, params) {
@@ -73,11 +77,17 @@ export default class Rays {
 	}
 
 	build() {
+		// The reserve shafts live past instanceCount: invisible for free until
+		// the sunburst raises the draw count (see update)- no rebuild mid-event.
+		// Both populations are spread over the FULL ring independently, so the
+		// base field stays uniform and the burst pierces everywhere at once.
 		const count = this.params.rays.count
-		const ray = new Float32Array(count * 3)
-		const size = new Float32Array(count * 2)
-		for (let i = 0; i < count; i++) {
-			ray[i * 3] = (i / count) * Math.PI * 2 + Math.random() * 0.8   // spread around the ring
+		const total = count + BURST_RESERVE
+		const ray = new Float32Array(total * 3)
+		const size = new Float32Array(total * 2)
+		for (let i = 0; i < total; i++) {
+			const ringT = i < count ? i / count : (i - count) / BURST_RESERVE
+			ray[i * 3] = ringT * Math.PI * 2 + Math.random() * 0.8   // spread around the ring
 			ray[i * 3 + 1] = 8 + Math.random() * 28
 			ray[i * 3 + 2] = Math.random()
 			size[i * 2] = 1.5 + Math.random() * 4.5
@@ -106,7 +116,11 @@ export default class Rays {
 		this.mesh.visible = p.enabled && p.opacity >= 0.005
 		if (!this.mesh.visible) return
 		this.material.uniforms.time.value += dt * features.rate
-		this.material.uniforms.globalOpacity.value = p.opacity
+		// The rays boost channels (Dawn sunburst): the shafts blaze and extra
+		// ones pierce through- drawn from the build-time reserve, appearing
+		// staggered along the envelope ramp, masked by the swelling light.
+		this.mesh.geometry.instanceCount = p.count + Math.min(BURST_RESERVE, Math.round(features.boost.raysCount))
+		this.material.uniforms.globalOpacity.value = p.opacity * (1 + features.boost.rays)
 	}
 
 }

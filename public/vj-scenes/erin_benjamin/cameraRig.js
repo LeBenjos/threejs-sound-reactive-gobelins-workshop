@@ -16,6 +16,12 @@ export default class CameraRig {
 		// this.body is wired by the scene after construction.
 		this.body = null
 		this.trackShot = null
+		// Orbit shots LOOK AT the body, not the world origin: the drift and the
+		// wind lean push him around, and a fixed-origin lookAt lets him slide to
+		// the frame edge. Smoothed follow (lookSmooth)- tracking him rigidly
+		// would counter-steer every sway and kill the handheld feel.
+		this.lookTarget = null   // the body pivot- wired by the scene after init
+		this.lookSmooth = new THREE.Vector3()
 		this.faceAxis = new THREE.Vector3(0, -1, 0)   // head-bone local axis pointing out of the face (verified visually on this rig)
 		this.headPos = new THREE.Vector3()
 		this.handPos = new THREE.Vector3()
@@ -110,8 +116,14 @@ export default class CameraRig {
 		// The target rides 60% of the bob (same cure as the director's height
 		// LFO): pure-pinned lookAt turned every vertical oscillation into a
 		// pitch sweep of the whole world. applyFeel scales the shake by the
-		// distance to this target.
-		this.lookScratch.set(0, this.lookY + bob * 0.6, 0)
+		// distance to this target. The x/z follow the drifting body (eased over
+		// ~0.4s) so the framing wanders WITH him instead of losing him.
+		// The lift is CLAMPED to ±0.5 around him: at full bob + energy push the
+		// unclamped ride climbed ~1.3- above his head- and the frame filled
+		// with sky while he sank off the bottom.
+		if (this.lookTarget) this.lookSmooth.lerp(this.lookTarget.position, 1 - Math.exp(-dt / 0.4))
+		const lift = Math.min(0.5, Math.max(-0.5, this.lookY + bob * 0.6))
+		this.lookScratch.set(this.lookSmooth.x, lift + this.lookSmooth.y, this.lookSmooth.z)
 		this.camera.lookAt(this.lookScratch)
 		this.applyFeel(dt, features)
 	}

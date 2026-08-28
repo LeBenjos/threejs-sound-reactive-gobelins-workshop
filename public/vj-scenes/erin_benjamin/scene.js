@@ -6,6 +6,7 @@ import Body from './body.js'
 import CameraRig from './cameraRig.js'
 import Clouds from './clouds.js'
 import { createDefaultParams, pickPreset } from './config.js'
+import Crowd from './crowd.js'
 import DebugView from './debugView.js'
 import Director from './director.js'
 import DropTimeline from './dropTimeline.js'
@@ -16,6 +17,7 @@ import PostFX from './postfx.js'
 import Rays from './rays.js'
 import Sky from './sky.js'
 import SpeedLines from './speedLines.js'
+import Twin from './twin.js'
 import Wind from './wind.js'
 
 // Orchestrator: owns the renderer + the shared params tree, wires the modules
@@ -64,8 +66,23 @@ export default class ErinBenjaminScene {
 		this.scene.add(this.pivot)
 		this.body.init(this.pivot)
 		this.cameraRig.body = this.body   // head anchor for the director's face shot
+		this.cameraRig.lookTarget = this.pivot   // orbit shots follow the drifting body, not the origin
+		// Clone pool for the crowdfall event- built from the normalized body, so
+		// it must come after body.init().
+		this.crowd = new Crowd(this.params)
+		this.crowd.init(this.scene, this.body)
+		this.twin = new Twin(this.params)
+		this.twin.init(this.scene, this.body, this.pivot)
 
 		this.postfx = new PostFX(this.renderer, this.scene, this.cameraRig.camera, this.params)
+		// The echo copies nest around the body's screen position. The hips bone
+		// is his visual center in the CURRENT pose- the animation swings the
+		// body around the pivot, and on close shots that world offset is a huge
+		// screen offset. Pivot only as a fallback if the rig has no such bone.
+		this.postfx.echoAnchor = this.body.hipsBone ?? this.pivot
+		this.postfx.multiCamPass.anchor = this.body.hipsBone ?? this.pivot   // the orbit feeds look AT him too
+		// The echo copies never repeat the clones or the twin- hero only.
+		this.postfx.echoExclude = [this.crowd.group, this.twin.wrapper].filter(Boolean)
 		this.director = new Director(this.params, this.cameraRig)
 		this.events = new MusicEvents(this.params, this.body, this.director)
 		this.autopilot = new Autopilot(this.params, this.sky, this.clouds, this.body)
@@ -118,13 +135,16 @@ export default class ErinBenjaminScene {
 		// the live detector down while it owns the current track.
 		this.dropTimeline.update(this.features)
 		this.features.update(dt, a)
-		this.wind.update(dt, this.features)   // writes params.wind.angle- sky/clouds/lines read it below
-		// Musical events: rare animation triggers + their camera staging.
+		// Musical events: rare animation triggers + their camera staging. Before
+		// the wind and the world modules: the zero-G envelope they read
+		// (features.zeroG, the rate scale) must be this frame's, not last frame's.
 		this.events.update(dt, a, this.features)
+		this.wind.update(dt, this.features)   // writes params.wind.angle- sky/clouds/lines read it below
 		// Inspection mode: the world modules follow the debug camera instead of
 		// the rig's, and the postfx chain is bypassed (raw render + rig frustum).
 		const cam = this.debugView?.enabled ? this.debugView.camera : this.cameraRig.camera
 		this.body.update(dt, a, this.features, cam)
+		this.crowd.update(dt, this.features)   // reads boost.crowd- events ran above
 
 		// Autopilot next- mutates params so the audio-reactive logic below adds on top.
 		if (this.params.autopilot.enabled) this.autopilot.update(dt)
@@ -138,6 +158,12 @@ export default class ErinBenjaminScene {
 		// the pre-drop lean push the character too- one weather for everyone.
 		const windLean = Math.sin(THREE.MathUtils.degToRad(this.params.wind.angle)) * 0.9
 		this.pivot.position.set(Math.sin(this.driftPhase * 0.31) * drift + windLean, 0, Math.sin(this.driftPhase * 0.23 + 1.3) * drift)
+		// The mirrored twin- AFTER the pivot writes (it reflects them) and the
+		// body's mixer (it copies the pose). While it runs, the rig and the
+		// multicam feeds aim at the midpoint of the pair instead of the hero.
+		this.twin.update(dt, this.features)
+		this.cameraRig.lookTarget = this.twin.active ? this.twin.focus : this.pivot
+		this.postfx.multiCamPass.anchor = this.twin.active ? this.twin.focus : (this.body.hipsBone ?? this.pivot)
 		// A detected drop is a MOMENT: hard palette switch + camera accent (the
 		// flash itself rides features.dropPulse inside sky/bloom/rim).
 		if (this.features.dropPulse > 0.9 && this.prevDropPulse <= 0.9) {

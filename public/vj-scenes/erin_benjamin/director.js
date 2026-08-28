@@ -67,16 +67,18 @@ export default class Director {
 
 		if (this.mode === 'base') {
 			// The home flow: slow LFO breathing on radius/height (different
-			// periods avoid lock-in- the eye reads it as wandering).
+			// periods avoid lock-in- the eye reads it as wandering). Height swing
+			// kept modest (±0.8 around 0.4): the old ±1.5 topped out at 2.1 and
+			// the high half was a steep plunge that lost the body in the frame.
 			const r = this.rig.orbit
 			r.radius = 4.8 + Math.sin(this.phase * (Math.PI * 2) / 32) * 1.8
-			r.baseHeight = 0.6 + Math.sin(this.phase * (Math.PI * 2) / 27 + 1.7) * 1.5
+			r.baseHeight = 0.4 + Math.sin(this.phase * (Math.PI * 2) / 27 + 1.7) * 0.8
 			// The look target rides 60% of the height LFO: with lookAt pinned, the
 			// LFO's descending half became a sustained PITCH sweep dragging the
 			// whole world- background included- down the screen (the slowed sky
 			// scroll no longer masks it). Following most of it keeps the framing
 			// breathing while the horizon stays quiet.
-			this.rig.lookY = (r.baseHeight - 0.6) * 0.6
+			this.rig.lookY = (r.baseHeight - 0.4) * 0.6
 
 			this.cooldown -= dt
 			this.baseTime += dt
@@ -139,19 +141,23 @@ export default class Director {
 	}
 
 	// Hard-cut to an accent shot, picked by energy-blended rarity weights
-	// (never the shot already running- matters when accents chain).
-	enterAccent(energy) {
-		let total = 0
-		const weights = ACCENT_SHOTS.map((s) => {
-			const w = s === this.shot ? 0 : s.calm + (s.intense - s.calm) * energy
-			total += w
-			return w
-		})
-		let roll = Math.random() * total
-		let next = ACCENT_SHOTS[0]
-		for (let i = 0; i < ACCENT_SHOTS.length; i++) {
-			roll -= weights[i]
-			if (roll <= 0) { next = ACCENT_SHOTS[i]; break }
+	// (never the shot already running- matters when accents chain). A
+	// signature event may force a named shot instead (zero-G stages on 'far').
+	enterAccent(energy, forceName = null) {
+		let next = forceName ? ACCENT_SHOTS.find((s) => s.name === forceName) : null
+		if (!next) {
+			let total = 0
+			const weights = ACCENT_SHOTS.map((s) => {
+				const w = s === this.shot ? 0 : s.calm + (s.intense - s.calm) * energy
+				total += w
+				return w
+			})
+			let roll = Math.random() * total
+			next = ACCENT_SHOTS[0]
+			for (let i = 0; i < ACCENT_SHOTS.length; i++) {
+				roll -= weights[i]
+				if (roll <= 0) { next = ACCENT_SHOTS[i]; break }
+			}
 		}
 		this.mode = 'accent'
 		this.shot = next

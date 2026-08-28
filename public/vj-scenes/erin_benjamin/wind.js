@@ -56,7 +56,10 @@ export default class Wind {
 		this.angle += this.vel * dt
 		// The +-60 clamp keeps cos(angle) > 0 everywhere: the world's vertical
 		// component can never vanish or flip, whatever the spring does.
-		p.angle = THREE.MathUtils.clamp(this.angle, -60, 60)
+		// The suspension events (Cosmos zero-G, Abyss apnea) flatten the output-
+		// space and deep water have no weather; the spring keeps integrating
+		// underneath, so the lean is simply back when the envelope releases.
+		p.angle = THREE.MathUtils.clamp(this.angle, -60, 60) * Math.max(0, 1 - features.boost.wind)
 	}
 
 }
