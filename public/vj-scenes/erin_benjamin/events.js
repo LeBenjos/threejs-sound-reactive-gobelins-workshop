@@ -107,6 +107,7 @@ export default class MusicEvents {
 		this.director = director
 		this.cooldown = 0
 		this.prevKickHard = 0
+		this.prevDropPulse = 0
 		// Running fx envelopes. Several may stack (their boosts add up)- the
 		// only rules live in startFx: no fx doubles itself, and shatter and
 		// multicam never share the frame (two full-screen Voronoi treatments).
@@ -214,18 +215,26 @@ export default class MusicEvents {
 			this.signatureDone = false
 		}
 
-		// Rising edge of the hard kick (it decays from 1 every frame).
+		// Rising edges: the hard kick (the usual roll-gated path) and the drop
+		// pulse (both decay from 1 every frame).
 		const kickHit = audio.kickHard > 0.9 && this.prevKickHard <= 0.9
 		this.prevKickHard = audio.kickHard
+		const dropHit = p.onDrop && features.dropPulse > 0.9 && this.prevDropPulse <= 0.9
+		this.prevDropPulse = features.dropPulse
 		// Running fx events do not silence the rest: on the usual kick+chance
 		// roll, clip events AND other fx may still fire over them- startFx's
 		// stacking rules are the only bar (no fx doubles itself, shatter and
 		// multicam never together). The main cooldown is left untouched on an
 		// overlap fire, so the baseline event pacing is unaffected.
+		// A DROP bypasses the chance roll, the cooldown and the energy gate
+		// entirely: the climax always lands an event on top of its palette
+		// switch and camera accent.
 		const overlap = this.fxList.length > 0
-		if (!kickHit || features.energy < p.minEnergy) return
-		if (this.cooldown > 0 && !overlap) return
-		if (Math.random() >= p.chance) return
+		if (!dropHit) {
+			if (!kickHit || features.energy < p.minEnergy) return
+			if (this.cooldown > 0 && !overlap) return
+			if (Math.random() >= p.chance) return
+		}
 
 		// Preset gate first (signatures only exist under their sky), then the
 		// energy-blended weighted pick, repeat-penalized. Already-running fx

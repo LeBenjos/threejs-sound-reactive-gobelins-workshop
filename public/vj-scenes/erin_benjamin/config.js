@@ -166,7 +166,9 @@ export function createDefaultParams() {
 		// Animation + fx events on the hard kicks ⇒ roughly one event every
 		// 30-50s. Frequent enough to carry the show, spaced enough to stay
 		// moments (and overlaps stack on top- see events.js).
-		events: { enabled: true, chance: 0.2, cooldown: 20, minEnergy: 0.3 },
+		// onDrop: every detected drop fires an event outright (chance/cooldown
+		// bypassed- the drop IS the moment); the kick path keeps its rolls.
+		events: { enabled: true, chance: 0.2, cooldown: 20, minEnergy: 0.3, onDrop: true },
 		body: {
 			material: 'rim',
 			bassScale: 0.55,

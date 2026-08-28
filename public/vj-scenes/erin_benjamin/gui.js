@@ -215,6 +215,7 @@ export default class Gui {
 		signature('🫧 apnea (Abyss)', 'Abyss', 'apnea')
 		signature('✨ first star (Twilight)', 'Twilight', 'firstStar')
 		events.addBinding(params.events, 'enabled')
+		events.addBinding(params.events, 'onDrop', { label: 'fire on drops' })
 		events.addBinding(params.events, 'chance', { min: 0, max: 1, step: 0.05 })
 		events.addBinding(params.events, 'cooldown', { min: 0, max: 60, step: 1 })
 		events.addBinding(params.events, 'minEnergy', { min: 0, max: 1, step: 0.05 })
