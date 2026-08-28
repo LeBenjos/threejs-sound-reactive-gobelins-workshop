@@ -18,20 +18,20 @@ const EVENTS = [
 	// intense too- otherwise backflip wins nearly every roll.
 	// (the flying clip is still in character.glb- re-add a line here to bring it back)
 	{ name: 'backflip', hold: 0, calm: 0.5, intense: 3 },        // one-shot- returns by itself
-	{ name: 'backfalling', hold: [5, 9], calm: 3, intense: 2 },  // rolls onto his back- held then released
+	{ name: 'backfalling', hold: [8, 13], calm: 3, intense: 2 }, // rolls onto his back- held then released
 	{ name: 'spin', hold: 0, calm: 1.5, intense: 2.5 },          // flat helicopter spin- one-shot, returns by itself
 	// Global fx events- no preset gate, any sky can play them.
-	{ name: 'shatter', fx: true, hold: [4, 6], calm: 1.5, intense: 2.5 },   // broken-mirror shards (LensShader)
-	{ name: 'multicam', fx: true, hold: [5, 8], calm: 1, intense: 2.5 },    // 2×2 control-room grid (MultiCamPass)
-	{ name: 'crowdfall', fx: true, hold: [8, 12], calm: 2, intense: 1.5 },  // other bodies falling around (Crowd)
-	{ name: 'echo', fx: true, hold: [5, 8], calm: 2, intense: 2 },          // Droste layers- the body repeats bigger around itself
-	{ name: 'twin', fx: true, hold: [9, 13], calm: 2, intense: 2 },         // a mirrored double facing the hero (Twin)- long ramps need the room
+	{ name: 'shatter', fx: true, hold: [6, 9], calm: 1.5, intense: 2.5 },   // broken-mirror shards (LensShader)
+	{ name: 'multicam', fx: true, hold: [8, 12], calm: 1, intense: 2.5 },   // control-room mosaic (MultiCamPass)
+	{ name: 'crowdfall', fx: true, hold: [12, 18], calm: 2, intense: 1.5 }, // other bodies falling around (Crowd)
+	{ name: 'echo', fx: true, hold: [8, 12], calm: 2, intense: 2 },         // Droste layers- the body repeats bigger around itself
+	{ name: 'twin', fx: true, hold: [13, 19], calm: 2, intense: 2 },        // a mirrored double facing the hero (Twin)- long ramps need the room
 	// Preset signatures- weighted heavy so the rare sky usually plays its own card.
 	{ name: 'lightning', fx: true, presets: ['Storm'], hold: 0, calm: 4, intense: 6 },
-	{ name: 'zeroG', fx: true, presets: ['Cosmos'], hold: [6, 9], calm: 6, intense: 4 },
-	{ name: 'sunburst', fx: true, presets: ['Dawn'], hold: [4, 6], calm: 5, intense: 3 },
-	{ name: 'apnea', fx: true, presets: ['Abyss'], hold: [5, 8], calm: 5, intense: 3 },
-	{ name: 'firstStar', fx: true, presets: ['Twilight'], hold: [4, 6], calm: 6, intense: 2 },
+	{ name: 'zeroG', fx: true, presets: ['Cosmos'], hold: [9, 14], calm: 6, intense: 4 },
+	{ name: 'sunburst', fx: true, presets: ['Dawn'], hold: [6, 9], calm: 5, intense: 3 },
+	{ name: 'apnea', fx: true, presets: ['Abyss'], hold: [8, 12], calm: 5, intense: 3 },
+	{ name: 'firstStar', fx: true, presets: ['Twilight'], hold: [6, 9], calm: 6, intense: 2 },
 ]
 const REPEAT_PENALTY = 0.35   // last-played event's weight multiplier- variety without strict alternation
 // Stacking conflicts: multicam owns the whole frame, so neither full-screen

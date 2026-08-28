@@ -163,10 +163,10 @@ export function createDefaultParams() {
 		// drives it (drop anticipation + impact gusts + energy weave); off =
 		// the GUI slider owns it. 0 = the pure vertical contract.
 		wind: { angle: 0, auto: true },
-		// Rare animation events (backflip / backfalling): low chance + long
-		// cooldown on the hard kicks ⇒ roughly one event every 1.5-2.5 min.
-		// Rarity is the point.
-		events: { enabled: true, chance: 0.08, cooldown: 45, minEnergy: 0.3 },
+		// Animation + fx events on the hard kicks ⇒ roughly one event every
+		// 30-50s. Frequent enough to carry the show, spaced enough to stay
+		// moments (and overlaps stack on top- see events.js).
+		events: { enabled: true, chance: 0.2, cooldown: 20, minEnergy: 0.3 },
 		body: {
 			material: 'rim',
 			bassScale: 0.55,
