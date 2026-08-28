@@ -11,7 +11,10 @@ import { BLOOM_LAYER } from './config.js'
 // transform- three flips the winding automatically), bass pulse and drift
 // included. `focus` sits at the midpoint between the two- the scene points
 // the camera rig and the multicam feeds at it while the event runs.
-// Emerges and leaves with the envelope (features.boost.twin) as a scale.
+// Entrance/exit: the double ARRIVES from deep inside the mirror- far behind
+// the plane on the envelope's attack, gliding into place facing the hero-
+// and sinks back into the depths on the release. Full size throughout; the
+// distance falloff is squared so the approach lands softly.
 //
 // Collision guard: a mirrored pair closes SYMMETRICALLY- a pose reaching
 // past the mirror plane would interpenetrate. The resting distance is right
@@ -20,6 +23,7 @@ import { BLOOM_LAYER } from './config.js'
 // so those ease the distance out by TRICK_BUMP and it glides back after.
 const DIST = 3.2        // resting hero-to-twin distance- the mirror plane sits at half
 const TRICK_BUMP = 1.4  // extra room during backflip / backfalling
+const APPROACH = 12     // depth behind the mirror the twin arrives from and retreats to
 
 export default class Twin {
 
@@ -80,10 +84,12 @@ export default class Twin {
 		// The mirror plane FOLLOWS the hero's drift (z = p.z + dist/2)- with a
 		// world-fixed plane the pair's separation breathed by twice the drift,
 		// which read as the twins closing in and backing off for no reason.
-		// Reflected z scale mirrors the pose about the plane; the envelope
-		// grows him out of the mirror and shrinks him back.
-		const s = this.pivot.scale.x * presence
-		this.wrapper.position.set(p.x, p.y, p.z + this.dist)
+		// Reflected z scale mirrors the pose about the plane. The envelope
+		// drives the APPROACH depth: far behind the plane at 0, in place at 1-
+		// the double walks out of the mirror's depths and sinks back into them.
+		const s = this.pivot.scale.x
+		const depth = (1 - presence) * (1 - presence) * APPROACH
+		this.wrapper.position.set(p.x, p.y, p.z + this.dist + depth)
 		this.wrapper.scale.set(s, s, -s)
 		// The pose transfer: bone locals verbatim- the wrapper's reflection
 		// does the mirroring.
@@ -94,7 +100,8 @@ export default class Twin {
 			dst.quaternion.copy(src.quaternion)
 			dst.scale.copy(src.scale)
 		}
-		this.focus.position.set(p.x, p.y, p.z + this.dist / 2)   // midpoint of the pair
+		// True midpoint of the pair, approach included- the camera watches him come.
+		this.focus.position.set(p.x, p.y, p.z + (this.dist + depth) / 2)
 	}
 
 }

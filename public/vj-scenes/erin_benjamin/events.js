@@ -25,7 +25,7 @@ const EVENTS = [
 	{ name: 'multicam', fx: true, hold: [5, 8], calm: 1, intense: 2.5 },    // 2×2 control-room grid (MultiCamPass)
 	{ name: 'crowdfall', fx: true, hold: [8, 12], calm: 2, intense: 1.5 },  // other bodies falling around (Crowd)
 	{ name: 'echo', fx: true, hold: [5, 8], calm: 2, intense: 2 },          // Droste layers- the body repeats bigger around itself
-	{ name: 'twin', fx: true, hold: [6, 10], calm: 2, intense: 2 },         // a mirrored double facing the hero (Twin)
+	{ name: 'twin', fx: true, hold: [9, 13], calm: 2, intense: 2 },         // a mirrored double facing the hero (Twin)- long ramps need the room
 	// Preset signatures- weighted heavy so the rare sky usually plays its own card.
 	{ name: 'lightning', fx: true, presets: ['Storm'], hold: 0, calm: 4, intense: 6 },
 	{ name: 'zeroG', fx: true, presets: ['Cosmos'], hold: [6, 9], calm: 6, intense: 4 },
@@ -88,10 +88,12 @@ const FX_SPECS = {
 	// The body's copies bloom outward and retract- staged wide so the layers
 	// have room to nest around the small centered figure.
 	echo: { shot: 'far', attack: 1.2, release: 1.5, boost: { echo: 1 } },
-	// The mirrored double grows out of an invisible mirror facing the hero;
-	// the rig and the multicam feeds re-aim at the midpoint of the pair
-	// (scene.js). Staged wide so both bodies fit the frame.
-	twin: { shot: 'far', attack: 1, release: 1.2, boost: { twin: 1 } },
+	// The mirrored double glides in from deep inside the mirror facing the
+	// hero and sinks back out; the rig and the multicam feeds re-aim at the
+	// midpoint of the pair (scene.js). Long ramps: the approach and the
+	// retreat read as unhurried drifts, not arrivals. Staged wide so both
+	// bodies fit the frame.
+	twin: { shot: 'far', attack: 2.2, release: 2.6, boost: { twin: 1 } },
 }
 
 const rand = (min, max) => min + Math.random() * (max - min)
